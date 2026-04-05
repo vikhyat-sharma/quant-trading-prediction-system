@@ -102,6 +102,25 @@ The application uses the following environment variables:
 go test ./...
 ```
 
+Run tests with verbose output:
+
+```bash
+go test -v ./...
+```
+
+Run tests with coverage:
+
+```bash
+go test -cover ./...
+```
+
+Generate coverage report:
+
+```bash
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out
+```
+
 ### Building
 
 ```bash
