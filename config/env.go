@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/spf13/viper"
+	"github.com/vikhyat-sharma/quant-trading-prediction-system/constants"
 )
 
 // Config holds all configuration for the application
@@ -17,17 +18,17 @@ type Config struct {
 
 // LoadConfig loads configuration from environment variables with validation
 func LoadConfig() (*Config, error) {
-	viper.SetDefault("PORT", "8080")
-	viper.SetDefault("DATABASE_URL", "postgres://user:password@localhost/quant_trading?sslmode=disable")
-	viper.SetDefault("ENVIRONMENT", "development")
-	viper.SetDefault("LOG_LEVEL", "info")
+	viper.SetDefault(constants.EnvKeyPort, constants.DefaultPort)
+	viper.SetDefault(constants.EnvKeyDatabaseURL, constants.DefaultDatabaseURL)
+	viper.SetDefault(constants.EnvKeyEnvironment, constants.DefaultEnvironment)
+	viper.SetDefault(constants.EnvKeyLogLevel, constants.DefaultLogLevel)
 	viper.AutomaticEnv()
 
 	config := &Config{
-		Port:        viper.GetString("PORT"),
-		DatabaseURL: viper.GetString("DATABASE_URL"),
-		Environment: viper.GetString("ENVIRONMENT"),
-		LogLevel:    viper.GetString("LOG_LEVEL"),
+		Port:        viper.GetString(constants.EnvKeyPort),
+		DatabaseURL: viper.GetString(constants.EnvKeyDatabaseURL),
+		Environment: viper.GetString(constants.EnvKeyEnvironment),
+		LogLevel:    viper.GetString(constants.EnvKeyLogLevel),
 	}
 
 	if err := config.Validate(); err != nil {
@@ -40,15 +41,15 @@ func LoadConfig() (*Config, error) {
 // Validate checks if the configuration is valid
 func (c *Config) Validate() error {
 	if c.Port == "" {
-		return fmt.Errorf("PORT cannot be empty")
+		return fmt.Errorf(constants.ErrMsgPortCannotBeEmpty)
 	}
 
 	if _, err := strconv.Atoi(c.Port); err != nil {
-		return fmt.Errorf("PORT must be a valid number: %w", err)
+		return fmt.Errorf(constants.ErrMsgPortMustBeValidNumber+": %w", err)
 	}
 
 	if c.DatabaseURL == "" {
-		return fmt.Errorf("DATABASE_URL cannot be empty")
+		return fmt.Errorf(constants.ErrMsgDatabaseURLCannotBeEmpty)
 	}
 
 	validEnvs := map[string]bool{
@@ -58,7 +59,7 @@ func (c *Config) Validate() error {
 	}
 
 	if !validEnvs[c.Environment] {
-		return fmt.Errorf("ENVIRONMENT must be one of: development, staging, production")
+		return fmt.Errorf(constants.ErrMsgEnvironmentInvalid)
 	}
 
 	validLogLevels := map[string]bool{
@@ -69,7 +70,7 @@ func (c *Config) Validate() error {
 	}
 
 	if !validLogLevels[c.LogLevel] {
-		return fmt.Errorf("LOG_LEVEL must be one of: debug, info, warn, error")
+		return fmt.Errorf(constants.ErrMsgLogLevelInvalid)
 	}
 
 	return nil

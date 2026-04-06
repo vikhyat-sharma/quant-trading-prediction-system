@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/vikhyat-sharma/quant-trading-prediction-system/constants"
 )
 
 // LoggingMiddleware logs HTTP requests
@@ -35,11 +37,11 @@ func (rw *responseWriter) WriteHeader(code int) {
 // CORSMiddleware adds CORS headers
 func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set(constants.HeaderAccessControlAllowOrigin, constants.CORSAllowOrigin)
+		w.Header().Set(constants.HeaderAccessControlAllowMethods, constants.CORSAllowMethods)
+		w.Header().Set(constants.HeaderAccessControlAllowHeaders, constants.CORSAllowHeaders)
 
-		if r.Method == "OPTIONS" {
+		if r.Method == constants.MethodOPTIONS {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -51,7 +53,7 @@ func CORSMiddleware(next http.Handler) http.Handler {
 // ContentTypeMiddleware ensures JSON content type for API responses
 func ContentTypeMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(constants.HeaderContentType, constants.ContentTypeJSON)
 		next.ServeHTTP(w, r)
 	})
 }

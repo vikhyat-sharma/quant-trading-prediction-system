@@ -7,9 +7,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/config"
+	"github.com/vikhyat-sharma/quant-trading-prediction-system/constants"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/controllers"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/db"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/repositories"
@@ -20,12 +20,12 @@ import (
 func main() {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatal("Failed to load config:", err)
+		log.Fatal(constants.LogMsgFailedToLoadConfig+":", err)
 	}
 
 	database, err := db.NewDB(cfg.DatabaseURL)
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		log.Fatal(constants.LogMsgFailedToConnectDB+":", err)
 	}
 	defer database.Close()
 
@@ -54,25 +54,25 @@ func main() {
 
 	// Start server in a goroutine
 	go func() {
-		log.Printf("Server starting on port %s", cfg.Port)
+		log.Printf(constants.LogMsgServerStarting, cfg.Port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal("Failed to start server:", err)
+			log.Fatal(constants.LogMsgFailedToStartServer+":", err)
 		}
 	}()
 
 	// Wait for interrupt signal
 	<-quit
-	log.Println("Server is shutting down...")
+	log.Println(constants.LogMsgServerShuttingDown)
 
 	// Create context with timeout for graceful shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DefaultServerShutdownTimeout)
 	defer cancel()
 
 	// Attempt graceful shutdown
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatal("Server forced to shutdown:", err)
+		log.Fatal(constants.LogMsgServerForcedShutdown+":", err)
 	}
 
 	close(done)
-	log.Println("Server exited")
+	log.Println(constants.LogMsgServerExited)
 }

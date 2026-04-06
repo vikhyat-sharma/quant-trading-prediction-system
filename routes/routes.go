@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/gorilla/mux"
+	"github.com/vikhyat-sharma/quant-trading-prediction-system/constants"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/controllers"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/middleware"
 )
@@ -15,12 +16,12 @@ func SetupRoutes(stockController *controllers.StockController, predictionControl
 	r.Use(middleware.ContentTypeMiddleware)
 
 	// Stock routes
-	r.HandleFunc("/stocks", stockController.GetAllStocks).Methods("GET")
-	r.HandleFunc("/stocks/{id}", stockController.GetStock).Methods("GET")
+	r.HandleFunc(constants.RouteStocks, stockController.GetAllStocks).Methods(constants.MethodGET)
+	r.HandleFunc(constants.RouteStockByID, stockController.GetStock).Methods(constants.MethodGET)
 
 	// Prediction routes
-	r.HandleFunc("/stocks/{stockID}/predictions", predictionController.GetPredictions).Methods("GET")
-	r.HandleFunc("/stocks/{stockID}/predictions/generate", predictionController.GeneratePrediction).Methods("POST")
+	r.HandleFunc(constants.RouteStockPredictions, predictionController.GetPredictions).Methods(constants.MethodGET)
+	r.HandleFunc(constants.RouteStockPredictionsGenerate, predictionController.GeneratePrediction).Methods(constants.MethodPOST)
 
 	return r
 }

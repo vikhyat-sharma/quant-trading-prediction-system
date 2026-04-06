@@ -5,6 +5,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/vikhyat-sharma/quant-trading-prediction-system/constants"
 )
 
 // DBConfig holds database configuration
@@ -16,16 +17,16 @@ type DBConfig struct {
 
 // NewDB creates a new database connection with optimized settings
 func NewDB(url string) (*sql.DB, error) {
-	db, err := sql.Open("postgres", url)
+	db, err := sql.Open(constants.DatabaseDriverPostgres, url)
 	if err != nil {
 		return nil, err
 	}
 
 	// Configure connection pool
 	config := DBConfig{
-		MaxOpenConns:    25,
-		MaxIdleConns:    5,
-		ConnMaxLifetime: 5 * time.Minute,
+		MaxOpenConns:    constants.DefaultMaxOpenConns,
+		MaxIdleConns:    constants.DefaultMaxIdleConns,
+		ConnMaxLifetime: constants.DefaultConnMaxLifetime,
 	}
 
 	db.SetMaxOpenConns(config.MaxOpenConns)
