@@ -29,6 +29,11 @@ func main() {
 	}
 	defer database.Close()
 
+	// Ensure database schema exists
+	if err := db.EnsureSchema(database); err != nil {
+		log.Fatal(constants.LogMsgFailedToEnsureSchema+":", err)
+	}
+
 	stockRepo := repositories.NewStockRepository(database)
 	predictionRepo := repositories.NewPredictionRepository(database)
 

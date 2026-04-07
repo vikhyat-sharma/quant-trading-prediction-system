@@ -107,4 +107,5 @@ const (
 	LogMsgFailedToConnectDB    = "Failed to connect to database"
 	LogMsgFailedToStartServer  = "Failed to start server"
 	LogMsgServerForcedShutdown = "Server forced to shutdown"
+	LogMsgFailedToEnsureSchema = "Failed to ensure database schema"
 )

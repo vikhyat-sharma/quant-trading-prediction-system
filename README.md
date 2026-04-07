@@ -47,21 +47,8 @@ The project follows a clean architecture pattern with the following layers:
    # Edit .env with your database credentials
    ```
 
-4. Set up PostgreSQL database and create tables:
-   ```sql
-   CREATE TABLE stocks (
-       id SERIAL PRIMARY KEY,
-       symbol VARCHAR(10) NOT NULL,
-       name VARCHAR(255) NOT NULL
-   );
-
-   CREATE TABLE predictions (
-       id SERIAL PRIMARY KEY,
-       stock_id INTEGER REFERENCES stocks(id),
-       predicted_price DECIMAL(10,2) NOT NULL,
-       date TIMESTAMP NOT NULL
-   );
-   ```
+4. Set up PostgreSQL database:
+   The application will automatically create the required tables and indexes on startup. Just ensure your PostgreSQL database is running and accessible.
 
 5. Run the application:
    ```bash

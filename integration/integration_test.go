@@ -51,25 +51,10 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("failed to connect to database: %v", err)
 	}
 
-	schema := []string{
-		`CREATE TABLE IF NOT EXISTS stocks (
-		    id SERIAL PRIMARY KEY,
-		    symbol VARCHAR(10) NOT NULL UNIQUE,
-		    name VARCHAR(255) NOT NULL
-		);`,
-		`CREATE TABLE IF NOT EXISTS predictions (
-		    id SERIAL PRIMARY KEY,
-		    stock_id INTEGER NOT NULL REFERENCES stocks(id) ON DELETE CASCADE,
-		    predicted_price DECIMAL(10,2) NOT NULL,
-		    date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-		);`,
-	}
-
-	for _, stmt := range schema {
-		if _, err := database.Exec(stmt); err != nil {
-			database.Close()
-			t.Fatalf("failed to ensure schema: %v", err)
-		}
+	// Ensure schema exists
+	if err := db.EnsureSchema(database); err != nil {
+		database.Close()
+		t.Fatalf("failed to ensure schema: %v", err)
 	}
 
 	return database
