@@ -1,14 +1,19 @@
 package db
 
 import (
+	"regexp"
+	"strings"
 	"time"
+
+	"github.com/vikhyat-sharma/quant-trading-prediction-system/constants"
 )
 
 // Stock represents a stock entity
 type Stock struct {
-	ID     int    `json:"id" db:"id"`
-	Symbol string `json:"symbol" db:"symbol"`
-	Name   string `json:"name" db:"name"`
+	ID       int    `json:"id" db:"id"`
+	Symbol   string `json:"symbol" db:"symbol"`
+	Name     string `json:"name" db:"name"`
+	Exchange string `json:"exchange" db:"exchange"`
 }
 
 // Prediction represents a price prediction for a stock
@@ -24,9 +29,22 @@ func (s *Stock) Validate() error {
 	if s.Symbol == "" {
 		return ErrInvalidSymbol
 	}
+
+	validSymbol := regexp.MustCompile(`^[A-Z0-9\.]{1,10}$`)
+	if !validSymbol.MatchString(strings.ToUpper(s.Symbol)) {
+		return ErrInvalidSymbol
+	}
+
 	if s.Name == "" {
 		return ErrInvalidName
 	}
+
+	exchange := strings.ToUpper(strings.TrimSpace(s.Exchange))
+	if exchange != constants.ExchangeNSE && exchange != constants.ExchangeBSE {
+		return ErrInvalidExchange
+	}
+
+	s.Exchange = exchange
 	return nil
 }
 

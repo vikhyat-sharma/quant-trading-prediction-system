@@ -16,7 +16,8 @@ func NewStockRepository(db *sql.DB) *StockRepository {
 
 func (r *StockRepository) GetStock(id int) (*db.Stock, error) {
 	var stock db.Stock
-	err := r.db.QueryRow("SELECT id, symbol, name FROM stocks WHERE id = $1", id).Scan(&stock.ID, &stock.Symbol, &stock.Name)
+	err := r.db.QueryRow("SELECT id, symbol, exchange, name FROM stocks WHERE id = $1", id).
+		Scan(&stock.ID, &stock.Symbol, &stock.Exchange, &stock.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +25,7 @@ func (r *StockRepository) GetStock(id int) (*db.Stock, error) {
 }
 
 func (r *StockRepository) GetAllStocks() ([]*db.Stock, error) {
-	rows, err := r.db.Query("SELECT id, symbol, name FROM stocks")
+	rows, err := r.db.Query("SELECT id, symbol, exchange, name FROM stocks")
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +33,7 @@ func (r *StockRepository) GetAllStocks() ([]*db.Stock, error) {
 	var stocks []*db.Stock
 	for rows.Next() {
 		var stock db.Stock
-		err := rows.Scan(&stock.ID, &stock.Symbol, &stock.Name)
+		err := rows.Scan(&stock.ID, &stock.Symbol, &stock.Exchange, &stock.Name)
 		if err != nil {
 			return nil, err
 		}

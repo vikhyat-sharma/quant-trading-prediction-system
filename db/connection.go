@@ -59,12 +59,14 @@ func NewDBWithConfig(url string, config DBConfig) (*sql.DB, error) {
 }
 
 // EnsureSchema creates the required database schema if it doesn't exist
-func EnsureSchema(db *sql.DB) error {
+func EnsureSchema(database *sql.DB) error {
 	schema := []string{
 		`CREATE TABLE IF NOT EXISTS stocks (
 		    id SERIAL PRIMARY KEY,
-		    symbol VARCHAR(10) NOT NULL UNIQUE,
-		    name VARCHAR(255) NOT NULL
+		    symbol VARCHAR(10) NOT NULL,
+		    exchange VARCHAR(10) NOT NULL DEFAULT 'NSE',
+		    name VARCHAR(255) NOT NULL,
+		    UNIQUE(symbol, exchange)
 		);`,
 		`CREATE TABLE IF NOT EXISTS predictions (
 		    id SERIAL PRIMARY KEY,
@@ -74,10 +76,22 @@ func EnsureSchema(db *sql.DB) error {
 		);`,
 		`CREATE INDEX IF NOT EXISTS idx_predictions_stock_id ON predictions(stock_id);`,
 		`CREATE INDEX IF NOT EXISTS idx_predictions_date ON predictions(date);`,
+		`CREATE INDEX IF NOT EXISTS idx_stocks_symbol_exchange ON stocks(symbol, exchange);`,
 	}
 
 	for _, stmt := range schema {
-		if _, err := db.Exec(stmt); err != nil {
+		if _, err := database.Exec(stmt); err != nil {
+			return err
+		}
+	}
+
+	alterations := []string{
+		`ALTER TABLE stocks ADD COLUMN IF NOT EXISTS exchange VARCHAR(10) NOT NULL DEFAULT 'NSE';`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_stocks_symbol_exchange ON stocks(symbol, exchange);`,
+	}
+
+	for _, stmt := range alterations {
+		if _, err := database.Exec(stmt); err != nil {
 			return err
 		}
 	}

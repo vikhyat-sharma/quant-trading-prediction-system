@@ -60,6 +60,11 @@ const (
 	ErrMsgLogLevelInvalid          = "LOG_LEVEL must be one of: debug, info, warn, error"
 )
 
+// Stock market errors
+const (
+	ErrMsgInvalidExchange = "Exchange must be NSE or BSE"
+)
+
 // Configuration Keys and Defaults
 const (
 	// Environment variable keys
@@ -83,6 +88,13 @@ const (
 	DefaultMaxOpenConns    = 25
 	DefaultMaxIdleConns    = 5
 	DefaultConnMaxLifetime = 5 * time.Minute
+)
+
+// Stock exchange constants
+const (
+	ExchangeNSE     = "NSE"
+	ExchangeBSE     = "BSE"
+	DefaultExchange = ExchangeNSE
 )
 
 // Route Paths

@@ -7,21 +7,26 @@ import (
 
 func TestStockModel(t *testing.T) {
 	stock := Stock{
-		ID:     1,
-		Symbol: "AAPL",
-		Name:   "Apple Inc.",
+		ID:       1,
+		Symbol:   "TCS",
+		Exchange: "NSE",
+		Name:     "Tata Consultancy Services Ltd.",
 	}
 
 	if stock.ID != 1 {
 		t.Errorf("expected ID 1, got %d", stock.ID)
 	}
 
-	if stock.Symbol != "AAPL" {
-		t.Errorf("expected symbol AAPL, got %s", stock.Symbol)
+	if stock.Symbol != "TCS" {
+		t.Errorf("expected symbol TCS, got %s", stock.Symbol)
 	}
 
-	if stock.Name != "Apple Inc." {
-		t.Errorf("expected name Apple Inc., got %s", stock.Name)
+	if stock.Exchange != "NSE" {
+		t.Errorf("expected exchange NSE, got %s", stock.Exchange)
+	}
+
+	if stock.Name != "Tata Consultancy Services Ltd." {
+		t.Errorf("expected name Tata Consultancy Services Ltd., got %s", stock.Name)
 	}
 }
 
@@ -53,14 +58,18 @@ func TestPredictionModel(t *testing.T) {
 
 func TestStockModelJSONSerialization(t *testing.T) {
 	stock := Stock{
-		ID:     1,
-		Symbol: "GOOGL",
-		Name:   "Alphabet Inc.",
+		ID:       1,
+		Symbol:   "INFY",
+		Exchange: "BSE",
+		Name:     "Infosys Ltd.",
 	}
 
 	// Verify JSON tags are present and structs can be serialized
 	if stock.Symbol == "" {
 		t.Errorf("Stock should have non-empty symbol for JSON serialization")
+	}
+	if stock.Exchange == "" {
+		t.Errorf("Stock should have non-empty exchange for JSON serialization")
 	}
 }
 

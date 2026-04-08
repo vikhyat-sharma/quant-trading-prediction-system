@@ -14,10 +14,10 @@ func TestStockRepository_GetStock_Success(t *testing.T) {
 	}
 	defer mockDB.Close()
 
-	rows := sqlmock.NewRows([]string{"id", "symbol", "name"}).
-		AddRow(1, "AAPL", "Apple Inc.")
+	rows := sqlmock.NewRows([]string{"id", "symbol", "exchange", "name"}).
+		AddRow(1, "TCS", "NSE", "Tata Consultancy Services Ltd.")
 
-	mock.ExpectQuery("SELECT id, symbol, name FROM stocks WHERE id = \\$1").
+	mock.ExpectQuery("SELECT id, symbol, exchange, name FROM stocks WHERE id = \\\\$1").
 		WithArgs(1).
 		WillReturnRows(rows)
 
@@ -32,8 +32,8 @@ func TestStockRepository_GetStock_Success(t *testing.T) {
 		t.Errorf("expected stock, got nil")
 	}
 
-	if stock != nil && stock.Symbol != "AAPL" {
-		t.Errorf("expected symbol AAPL, got %s", stock.Symbol)
+	if stock != nil && stock.Symbol != "TCS" {
+		t.Errorf("expected symbol TCS, got %s", stock.Symbol)
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
@@ -48,7 +48,7 @@ func TestStockRepository_GetStock_NotFound(t *testing.T) {
 	}
 	defer mockDB.Close()
 
-	mock.ExpectQuery("SELECT id, symbol, name FROM stocks WHERE id = \\$1").
+	mock.ExpectQuery("SELECT id, symbol, exchange, name FROM stocks WHERE id = \\\\$1").
 		WithArgs(999).
 		WillReturnError(sql.ErrNoRows)
 
@@ -75,11 +75,11 @@ func TestStockRepository_GetAllStocks_Success(t *testing.T) {
 	}
 	defer mockDB.Close()
 
-	rows := sqlmock.NewRows([]string{"id", "symbol", "name"}).
-		AddRow(1, "AAPL", "Apple Inc.").
-		AddRow(2, "GOOGL", "Alphabet Inc.")
+	rows := sqlmock.NewRows([]string{"id", "symbol", "exchange", "name"}).
+		AddRow(1, "TCS", "NSE", "Tata Consultancy Services Ltd.").
+		AddRow(2, "INFY", "BSE", "Infosys Ltd.")
 
-	mock.ExpectQuery("SELECT id, symbol, name FROM stocks").
+	mock.ExpectQuery("SELECT id, symbol, exchange, name FROM stocks").
 		WillReturnRows(rows)
 
 	repo := NewStockRepository(mockDB)
@@ -93,12 +93,12 @@ func TestStockRepository_GetAllStocks_Success(t *testing.T) {
 		t.Errorf("expected 2 stocks, got %d", len(stocks))
 	}
 
-	if stocks[0].Symbol != "AAPL" {
-		t.Errorf("expected first stock symbol AAPL, got %s", stocks[0].Symbol)
+	if stocks[0].Symbol != "TCS" {
+		t.Errorf("expected first stock symbol TCS, got %s", stocks[0].Symbol)
 	}
 
-	if stocks[1].Symbol != "GOOGL" {
-		t.Errorf("expected second stock symbol GOOGL, got %s", stocks[1].Symbol)
+	if stocks[1].Symbol != "INFY" {
+		t.Errorf("expected second stock symbol INFY, got %s", stocks[1].Symbol)
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
@@ -113,9 +113,9 @@ func TestStockRepository_GetAllStocks_Empty(t *testing.T) {
 	}
 	defer mockDB.Close()
 
-	rows := sqlmock.NewRows([]string{"id", "symbol", "name"})
+	rows := sqlmock.NewRows([]string{"id", "symbol", "exchange", "name"})
 
-	mock.ExpectQuery("SELECT id, symbol, name FROM stocks").
+	mock.ExpectQuery("SELECT id, symbol, exchange, name FROM stocks").
 		WillReturnRows(rows)
 
 	repo := NewStockRepository(mockDB)

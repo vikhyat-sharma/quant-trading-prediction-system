@@ -1,8 +1,10 @@
 -- Create the stocks table
 CREATE TABLE IF NOT EXISTS stocks (
     id SERIAL PRIMARY KEY,
-    symbol VARCHAR(10) NOT NULL UNIQUE,
-    name VARCHAR(255) NOT NULL
+    symbol VARCHAR(10) NOT NULL,
+    exchange VARCHAR(10) NOT NULL DEFAULT 'NSE',
+    name VARCHAR(255) NOT NULL,
+    UNIQUE(symbol, exchange)
 );
 
 -- Create the predictions table
