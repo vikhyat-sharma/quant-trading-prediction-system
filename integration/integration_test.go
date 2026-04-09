@@ -63,7 +63,12 @@ func setupTestDB(t *testing.T) *sql.DB {
 func cleanupTestData(t *testing.T, database *sql.DB, symbol string) {
 	t.Helper()
 
-	_, err := database.Exec(`DELETE FROM predictions WHERE stock_id IN (SELECT id FROM stocks WHERE symbol = $1)`, symbol)
+	_, err := database.Exec(`DELETE FROM price_history WHERE stock_id IN (SELECT id FROM stocks WHERE symbol = $1)`, symbol)
+	if err != nil {
+		t.Fatalf("failed to clean price_history: %v", err)
+	}
+
+	_, err = database.Exec(`DELETE FROM predictions WHERE stock_id IN (SELECT id FROM stocks WHERE symbol = $1)`, symbol)
 	if err != nil {
 		t.Fatalf("failed to clean predictions: %v", err)
 	}
@@ -101,14 +106,17 @@ func createSamplePrediction(t *testing.T, database *sql.DB, stockID int, price f
 func buildRouter(database *sql.DB) http.Handler {
 	stockRepo := repositories.NewStockRepository(database)
 	predictionRepo := repositories.NewPredictionRepository(database)
+	priceHistoryRepo := repositories.NewPriceHistoryRepository(database)
 
 	stockService := services.NewStockService(stockRepo)
 	predictionService := services.NewPredictionService(predictionRepo)
+	priceHistoryService := services.NewPriceHistoryService(priceHistoryRepo)
 
 	stockController := controllers.NewStockController(stockService)
 	predictionController := controllers.NewPredictionController(predictionService)
+	priceHistoryController := controllers.NewPriceHistoryController(priceHistoryService)
 
-	return routes.SetupRoutes(stockController, predictionController)
+	return routes.SetupRoutes(stockController, predictionController, priceHistoryController)
 }
 
 func TestIntegration_GetAllStocks(t *testing.T) {
