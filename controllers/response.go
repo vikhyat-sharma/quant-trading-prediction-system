@@ -38,3 +38,9 @@ func writeErrorResponse(w http.ResponseWriter, statusCode int, message string, e
 
 	writeJSONResponse(w, statusCode, response)
 }
+
+// parseJSONBody parses the JSON request body into the provided struct
+func parseJSONBody(r *http.Request, v interface{}) error {
+	defer r.Body.Close()
+	return json.NewDecoder(r.Body).Decode(v)
+}

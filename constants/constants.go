@@ -51,6 +51,9 @@ const (
 	ErrMsgFailedToRetrieveStocks      = "Failed to retrieve stocks"
 	ErrMsgFailedToRetrievePredictions = "Failed to retrieve predictions"
 	ErrMsgFailedToGeneratePrediction  = "Failed to generate prediction"
+	ErrMsgFailedToCreateStock         = "Failed to create stock"
+	ErrMsgFailedToUpdateStock         = "Failed to update stock"
+	ErrMsgFailedToDeleteStock         = "Failed to delete stock"
 
 	// Configuration errors
 	ErrMsgPortCannotBeEmpty        = "PORT cannot be empty"
@@ -103,6 +106,10 @@ const (
 	RouteStockByID                = "/stocks/{id}"
 	RouteStockPredictions         = "/stocks/{stockID}/predictions"
 	RouteStockPredictionsGenerate = "/stocks/{stockID}/predictions/generate"
+	RouteStockPriceHistory        = "/stocks/{stockID}/price-history"
+	RouteStockPriceHistoryRange   = "/stocks/{stockID}/price-history/range"
+	RouteStockPriceStats          = "/stocks/{stockID}/price-stats"
+	RouteStockLatestPrice         = "/stocks/{stockID}/price-latest"
 )
 
 // Server Settings

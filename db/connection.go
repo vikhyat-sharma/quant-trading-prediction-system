@@ -74,8 +74,17 @@ func EnsureSchema(database *sql.DB) error {
 		    predicted_price DECIMAL(10,2) NOT NULL,
 		    date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		);`,
+		`CREATE TABLE IF NOT EXISTS price_history (
+		    id SERIAL PRIMARY KEY,
+		    stock_id INTEGER NOT NULL REFERENCES stocks(id) ON DELETE CASCADE,
+		    price DECIMAL(10,2) NOT NULL,
+		    date TIMESTAMP NOT NULL,
+		    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		);`,
 		`CREATE INDEX IF NOT EXISTS idx_predictions_stock_id ON predictions(stock_id);`,
 		`CREATE INDEX IF NOT EXISTS idx_predictions_date ON predictions(date);`,
+		`CREATE INDEX IF NOT EXISTS idx_price_history_stock_id ON price_history(stock_id);`,
+		`CREATE INDEX IF NOT EXISTS idx_price_history_date ON price_history(date);`,
 		`CREATE INDEX IF NOT EXISTS idx_stocks_symbol_exchange ON stocks(symbol, exchange);`,
 	}
 

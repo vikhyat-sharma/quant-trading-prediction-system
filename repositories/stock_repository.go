@@ -41,3 +41,43 @@ func (r *StockRepository) GetAllStocks() ([]*db.Stock, error) {
 	}
 	return stocks, nil
 }
+
+func (r *StockRepository) CreateStock(stock *db.Stock) (*db.Stock, error) {
+	var id int
+	err := r.db.QueryRow(
+		"INSERT INTO stocks (symbol, exchange, name) VALUES ($1, $2, $3) RETURNING id",
+		stock.Symbol, stock.Exchange, stock.Name,
+	).Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+	stock.ID = id
+	return stock, nil
+}
+
+func (r *StockRepository) UpdateStock(id int, stock *db.Stock) (*db.Stock, error) {
+	_, err := r.db.Exec(
+		"UPDATE stocks SET symbol = $1, exchange = $2, name = $3 WHERE id = $4",
+		stock.Symbol, stock.Exchange, stock.Name, id,
+	)
+	if err != nil {
+		return nil, err
+	}
+	stock.ID = id
+	return stock, nil
+}
+
+func (r *StockRepository) DeleteStock(id int) error {
+	result, err := r.db.Exec("DELETE FROM stocks WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return db.ErrRecordNotFound
+	}
+	return nil
+}
