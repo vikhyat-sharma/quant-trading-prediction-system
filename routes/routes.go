@@ -7,7 +7,7 @@ import (
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/middleware"
 )
 
-func SetupRoutes(stockController *controllers.StockController, predictionController *controllers.PredictionController, priceHistoryController *controllers.PriceHistoryController) *mux.Router {
+func SetupRoutes(stockController *controllers.StockController, predictionController *controllers.PredictionController, priceHistoryController *controllers.PriceHistoryController, alertController *controllers.AlertController) *mux.Router {
 	r := mux.NewRouter()
 
 	// Apply middleware to all routes
@@ -32,6 +32,13 @@ func SetupRoutes(stockController *controllers.StockController, predictionControl
 	r.HandleFunc(constants.RouteStockPriceHistoryRange, priceHistoryController.GetPriceHistoryByDateRange).Methods(constants.MethodGET)
 	r.HandleFunc(constants.RouteStockPriceStats, priceHistoryController.GetPriceStats).Methods(constants.MethodGET)
 	r.HandleFunc(constants.RouteStockLatestPrice, priceHistoryController.GetLatestPrice).Methods(constants.MethodGET)
+
+	// Alert routes
+	r.HandleFunc(constants.RouteStockAlerts, alertController.GetAlerts).Methods(constants.MethodGET)
+	r.HandleFunc(constants.RouteStockAlerts, alertController.CreateAlert).Methods(constants.MethodPOST)
+	r.HandleFunc(constants.RouteStockAlertByID, alertController.DeleteAlert).Methods(constants.MethodDELETE)
+	r.HandleFunc(constants.RouteStockAlertsEvaluate, alertController.EvaluateAlerts).Methods(constants.MethodPOST)
+	r.HandleFunc(constants.RouteStockNotifications, alertController.GetNotifications).Methods(constants.MethodGET)
 
 	return r
 }

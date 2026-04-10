@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 	"time"
@@ -30,6 +31,29 @@ type PriceHistory struct {
 	StockID   int       `json:"stock_id" db:"stock_id"`
 	Price     float64   `json:"price" db:"price"`
 	Date      time.Time `json:"date" db:"date"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
+const (
+	AlertConditionAbove = "above"
+	AlertConditionBelow = "below"
+)
+
+type Alert struct {
+	ID        int       `json:"id" db:"id"`
+	StockID   int       `json:"stock_id" db:"stock_id"`
+	Threshold float64   `json:"threshold" db:"threshold"`
+	Condition string    `json:"condition" db:"condition"`
+	Enabled   bool      `json:"enabled" db:"enabled"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
+type Notification struct {
+	ID        int       `json:"id" db:"id"`
+	AlertID   int       `json:"alert_id" db:"alert_id"`
+	StockID   int       `json:"stock_id" db:"stock_id"`
+	Price     float64   `json:"price" db:"price"`
+	Message   string    `json:"message" db:"message"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
@@ -75,6 +99,37 @@ func (ph *PriceHistory) Validate() error {
 	}
 	if ph.Price < 0 {
 		return ErrInvalidPrice
+	}
+	return nil
+}
+
+// Validate checks if the alert data is valid
+func (a *Alert) Validate() error {
+	if a.StockID <= 0 {
+		return ErrInvalidStockID
+	}
+	if a.Threshold < 0 {
+		return ErrInvalidThreshold
+	}
+
+	condition := strings.ToLower(strings.TrimSpace(a.Condition))
+	if condition != AlertConditionAbove && condition != AlertConditionBelow {
+		return ErrInvalidCondition
+	}
+	a.Condition = condition
+	return nil
+}
+
+// Validate checks if the notification data is valid
+func (n *Notification) Validate() error {
+	if n.AlertID <= 0 || n.StockID <= 0 {
+		return ErrInvalidStockID
+	}
+	if n.Price < 0 {
+		return ErrInvalidPrice
+	}
+	if n.Message == "" {
+		return errors.New("invalid notification message")
 	}
 	return nil
 }

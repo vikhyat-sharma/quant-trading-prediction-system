@@ -81,6 +81,22 @@ func EnsureSchema(database *sql.DB) error {
 		    date TIMESTAMP NOT NULL,
 		    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		);`,
+		`CREATE TABLE IF NOT EXISTS price_alerts (
+		    id SERIAL PRIMARY KEY,
+		    stock_id INTEGER NOT NULL REFERENCES stocks(id) ON DELETE CASCADE,
+		    threshold DECIMAL(10,2) NOT NULL,
+		    condition VARCHAR(10) NOT NULL,
+		    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+		    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		);`,
+		`CREATE TABLE IF NOT EXISTS notifications (
+		    id SERIAL PRIMARY KEY,
+		    alert_id INTEGER NOT NULL REFERENCES price_alerts(id) ON DELETE CASCADE,
+		    stock_id INTEGER NOT NULL REFERENCES stocks(id) ON DELETE CASCADE,
+		    price DECIMAL(10,2) NOT NULL,
+		    message TEXT NOT NULL,
+		    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		);`,
 		`CREATE INDEX IF NOT EXISTS idx_predictions_stock_id ON predictions(stock_id);`,
 		`CREATE INDEX IF NOT EXISTS idx_predictions_date ON predictions(date);`,
 		`CREATE INDEX IF NOT EXISTS idx_price_history_stock_id ON price_history(stock_id);`,

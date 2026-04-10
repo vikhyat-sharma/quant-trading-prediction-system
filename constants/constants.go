@@ -110,6 +110,10 @@ const (
 	RouteStockPriceHistoryRange   = "/stocks/{stockID}/price-history/range"
 	RouteStockPriceStats          = "/stocks/{stockID}/price-stats"
 	RouteStockLatestPrice         = "/stocks/{stockID}/price-latest"
+	RouteStockAlerts              = "/stocks/{stockID}/alerts"
+	RouteStockAlertByID           = "/stocks/{stockID}/alerts/{alertID}"
+	RouteStockAlertsEvaluate      = "/stocks/{stockID}/alerts/evaluate"
+	RouteStockNotifications       = "/stocks/{stockID}/notifications"
 )
 
 // Server Settings
