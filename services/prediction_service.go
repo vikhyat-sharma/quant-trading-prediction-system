@@ -27,6 +27,6 @@ func (s *PredictionService) GeneratePrediction(stockID int) (*db.Prediction, err
 		PredictedPrice: 100.0,
 		Date:           time.Now(),
 	}
-	// In a real implementation, save to database and perform actual prediction logic
-	return prediction, nil
+	// Save to database
+	return s.repo.CreatePrediction(prediction)
 }

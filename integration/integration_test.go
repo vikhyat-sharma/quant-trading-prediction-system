@@ -107,16 +107,20 @@ func buildRouter(database *sql.DB) http.Handler {
 	stockRepo := repositories.NewStockRepository(database)
 	predictionRepo := repositories.NewPredictionRepository(database)
 	priceHistoryRepo := repositories.NewPriceHistoryRepository(database)
+	alertRepo := repositories.NewAlertRepository(database)
+	notificationRepo := repositories.NewNotificationRepository(database)
 
 	stockService := services.NewStockService(stockRepo)
 	predictionService := services.NewPredictionService(predictionRepo)
 	priceHistoryService := services.NewPriceHistoryService(priceHistoryRepo)
+	alertService := services.NewAlertService(alertRepo, notificationRepo, priceHistoryRepo, stockRepo)
 
 	stockController := controllers.NewStockController(stockService)
 	predictionController := controllers.NewPredictionController(predictionService)
 	priceHistoryController := controllers.NewPriceHistoryController(priceHistoryService)
+	alertController := controllers.NewAlertController(alertService)
 
-	return routes.SetupRoutes(stockController, predictionController, priceHistoryController)
+	return routes.SetupRoutes(stockController, predictionController, priceHistoryController, alertController)
 }
 
 func TestIntegration_GetAllStocks(t *testing.T) {

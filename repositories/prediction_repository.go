@@ -31,3 +31,16 @@ func (r *PredictionRepository) GetPredictionsByStockID(stockID int) ([]*db.Predi
 	}
 	return predictions, nil
 }
+
+func (r *PredictionRepository) CreatePrediction(prediction *db.Prediction) (*db.Prediction, error) {
+	var id int
+	err := r.db.QueryRow(
+		"INSERT INTO predictions (stock_id, predicted_price, date) VALUES ($1, $2, $3) RETURNING id",
+		prediction.StockID, prediction.PredictedPrice, prediction.Date,
+	).Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+	prediction.ID = id
+	return prediction, nil
+}
