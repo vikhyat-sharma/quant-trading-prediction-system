@@ -25,6 +25,30 @@ type Prediction struct {
 	Date           time.Time `json:"date" db:"date"`
 }
 
+type User struct {
+	ID        int       `json:"id" db:"id"`
+	Name      string    `json:"name" db:"name"`
+	Email     string    `json:"email" db:"email"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
+type Portfolio struct {
+	ID          int       `json:"id" db:"id"`
+	UserID      int       `json:"user_id" db:"user_id"`
+	Name        string    `json:"name" db:"name"`
+	Description string    `json:"description" db:"description"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+}
+
+type PortfolioItem struct {
+	ID          int       `json:"id" db:"id"`
+	PortfolioID int       `json:"portfolio_id" db:"portfolio_id"`
+	StockID     int       `json:"stock_id" db:"stock_id"`
+	Quantity    float64   `json:"quantity" db:"quantity"`
+	AvgCost     float64   `json:"avg_cost" db:"avg_cost"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+}
+
 // PriceHistory represents historical price data for a stock
 type PriceHistory struct {
 	ID        int       `json:"id" db:"id"`

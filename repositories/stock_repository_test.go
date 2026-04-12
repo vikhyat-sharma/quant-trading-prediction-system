@@ -17,7 +17,7 @@ func TestStockRepository_GetStock_Success(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"id", "symbol", "exchange", "name"}).
 		AddRow(1, "TCS", "NSE", "Tata Consultancy Services Ltd.")
 
-	mock.ExpectQuery("SELECT id, symbol, exchange, name FROM stocks WHERE id = \\\\$1").
+	mock.ExpectQuery("SELECT id, symbol, exchange, name FROM stocks WHERE id = \\$1").
 		WithArgs(1).
 		WillReturnRows(rows)
 
@@ -48,7 +48,7 @@ func TestStockRepository_GetStock_NotFound(t *testing.T) {
 	}
 	defer mockDB.Close()
 
-	mock.ExpectQuery("SELECT id, symbol, exchange, name FROM stocks WHERE id = \\\\$1").
+	mock.ExpectQuery("SELECT id, symbol, exchange, name FROM stocks WHERE id = \\$1").
 		WithArgs(999).
 		WillReturnError(sql.ErrNoRows)
 

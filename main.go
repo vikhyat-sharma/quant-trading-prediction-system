@@ -39,18 +39,24 @@ func main() {
 	priceHistoryRepo := repositories.NewPriceHistoryRepository(database)
 	alertRepo := repositories.NewAlertRepository(database)
 	notificationRepo := repositories.NewNotificationRepository(database)
+	userRepo := repositories.NewUserRepository(database)
+	portfolioRepo := repositories.NewPortfolioRepository(database)
 
 	stockService := services.NewStockService(stockRepo)
 	predictionService := services.NewPredictionService(predictionRepo)
 	priceHistoryService := services.NewPriceHistoryService(priceHistoryRepo)
 	alertService := services.NewAlertService(alertRepo, notificationRepo, priceHistoryRepo, stockRepo)
+	userService := services.NewUserService(userRepo)
+	portfolioService := services.NewPortfolioService(portfolioRepo)
 
 	stockController := controllers.NewStockController(stockService)
 	predictionController := controllers.NewPredictionController(predictionService)
 	priceHistoryController := controllers.NewPriceHistoryController(priceHistoryService)
 	alertController := controllers.NewAlertController(alertService)
+	userController := controllers.NewUserController(userService)
+	portfolioController := controllers.NewPortfolioController(portfolioService)
 
-	router := routes.SetupRoutes(stockController, predictionController, priceHistoryController, alertController)
+	router := routes.SetupRoutes(stockController, predictionController, priceHistoryController, alertController, userController, portfolioController)
 
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,

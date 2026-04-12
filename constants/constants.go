@@ -40,11 +40,20 @@ const (
 	ErrMsgStockIDMustBePositive      = "Stock ID must be a positive integer"
 	ErrMsgInvalidPredictionIDFormat  = "Invalid prediction ID format"
 	ErrMsgPredictionIDMustBePositive = "Prediction ID must be a positive integer"
+	ErrMsgInvalidUserIDFormat        = "Invalid user ID format"
+	ErrMsgUserIDMustBePositive       = "User ID must be a positive integer"
+	ErrMsgInvalidPortfolioIDFormat   = "Invalid portfolio ID format"
+	ErrMsgPortfolioIDMustBePositive  = "Portfolio ID must be a positive integer"
+	ErrMsgInvalidHoldingIDFormat     = "Invalid holding ID format"
+	ErrMsgHoldingIDMustBePositive    = "Holding ID must be a positive integer"
 
 	// Not found errors
 	ErrMsgStockNotFound         = "Stock not found"
 	ErrMsgPredictionNotFound    = "Prediction not found"
 	ErrMsgNoPredictionsForStock = "No predictions found for this stock"
+	ErrMsgUserNotFound          = "User not found"
+	ErrMsgPortfolioNotFound     = "Portfolio not found"
+	ErrMsgHoldingNotFound       = "Holding not found"
 
 	// Operation errors
 	ErrMsgFailedToRetrieveStock       = "Failed to retrieve stock"
@@ -54,6 +63,20 @@ const (
 	ErrMsgFailedToCreateStock         = "Failed to create stock"
 	ErrMsgFailedToUpdateStock         = "Failed to update stock"
 	ErrMsgFailedToDeleteStock         = "Failed to delete stock"
+	ErrMsgFailedToRetrieveUsers       = "Failed to retrieve users"
+	ErrMsgFailedToRetrieveUser        = "Failed to retrieve user"
+	ErrMsgFailedToCreateUser          = "Failed to create user"
+	ErrMsgFailedToUpdateUser          = "Failed to update user"
+	ErrMsgFailedToDeleteUser          = "Failed to delete user"
+	ErrMsgFailedToRetrievePortfolios  = "Failed to retrieve portfolios"
+	ErrMsgFailedToRetrievePortfolio   = "Failed to retrieve portfolio"
+	ErrMsgFailedToCreatePortfolio     = "Failed to create portfolio"
+	ErrMsgFailedToUpdatePortfolio     = "Failed to update portfolio"
+	ErrMsgFailedToDeletePortfolio     = "Failed to delete portfolio"
+	ErrMsgFailedToRetrieveHoldings    = "Failed to retrieve holdings"
+	ErrMsgFailedToCreateHolding       = "Failed to create holding"
+	ErrMsgFailedToUpdateHolding       = "Failed to update holding"
+	ErrMsgFailedToDeleteHolding       = "Failed to delete holding"
 
 	// Configuration errors
 	ErrMsgPortCannotBeEmpty        = "PORT cannot be empty"
@@ -114,6 +137,12 @@ const (
 	RouteStockAlertByID           = "/stocks/{stockID}/alerts/{alertID}"
 	RouteStockAlertsEvaluate      = "/stocks/{stockID}/alerts/evaluate"
 	RouteStockNotifications       = "/stocks/{stockID}/notifications"
+	RouteUsers                    = "/users"
+	RouteUserByID                 = "/users/{id}"
+	RouteUserPortfolios           = "/users/{userID}/portfolios"
+	RouteUserPortfolioByID        = "/users/{userID}/portfolios/{portfolioID}"
+	RouteUserPortfolioHoldings    = "/users/{userID}/portfolios/{portfolioID}/holdings"
+	RouteUserPortfolioHoldingByID = "/users/{userID}/portfolios/{portfolioID}/holdings/{holdingID}"
 )
 
 // Server Settings
