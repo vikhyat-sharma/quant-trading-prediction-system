@@ -1,127 +1,200 @@
 # Quant Trading Prediction System
 
-A clean Go backend architecture for quantitative trading predictions using REST APIs.
+A production-ready Go backend for quantitative trading predictions, built with clean architecture principles and designed for scalability, maintainability, and performance.
 
-## Features
+---
 
-- Clean layered architecture (controllers, services, repositories)
-- RESTful API for stock and prediction management
-- PostgreSQL database integration
-- Docker containerization
-- Environment-based configuration
+## 🚀 Overview
 
-## Architecture
+This project provides a RESTful API for managing stocks and generating trading predictions. It follows a modular, layered architecture that separates concerns and simplifies testing, extension, and deployment.
 
-The project follows a clean architecture pattern with the following layers:
+---
 
-- **Controllers**: HTTP request handlers
-- **Services**: Business logic
-- **Repositories**: Data access layer
-- **DB**: Database models and connections
-- **Config**: Configuration management
+## ✨ Key Features
 
-## Prerequisites
+* Clean Architecture (Controller → Service → Repository)
+* RESTful API design
+* PostgreSQL integration with auto-migrations
+* Docker & Docker Compose support
+* Environment-based configuration
+* Testable and modular codebase
 
-- Go 1.21+
-- PostgreSQL
-- Docker (optional)
+---
 
-## Setup
+## 🏗 Architecture
+
+The codebase is organized into clearly defined layers:
+
+```
+├── controllers   # HTTP handlers (API layer)
+├── services      # Business logic
+├── repositories  # Database interaction
+├── db            # Models and DB connection
+├── config        # Environment configuration
+```
+
+### Responsibilities
+
+* **Controllers** → Handle HTTP requests/responses
+* **Services** → Implement core business logic
+* **Repositories** → Interact with the database
+* **DB** → Define models and manage connections
+* **Config** → Load and manage environment variables
+
+---
+
+## ⚙️ Prerequisites
+
+* Go 1.21+
+* PostgreSQL
+* Docker (optional, recommended)
+
+---
+
+## 🛠 Setup
 
 ### Local Development
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/vikhyat-sharma/quant-trading-prediction-system.git
-   cd quant-trading-prediction-system
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/vikhyat-sharma/quant-trading-prediction-system.git
+cd quant-trading-prediction-system
 
-2. Install dependencies:
-   ```bash
-   go mod tidy
-   ```
+# Install dependencies
+go mod tidy
 
-3. Set up environment variables:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your database credentials
-   ```
+# Configure environment variables
+cp .env.example .env
+```
 
-4. Set up PostgreSQL database:
-   The application will automatically create the required tables and indexes on startup. Just ensure your PostgreSQL database is running and accessible.
+Update `.env` with your PostgreSQL credentials.
 
-5. Run the application:
-   ```bash
-   go run main.go
-   ```
+---
 
-### Docker
+### 🗄 Database Setup
 
-1. Build and run with Docker Compose:
-   ```bash
-   docker-compose up --build
-   ```
+Ensure PostgreSQL is running and accessible.
 
-## API Endpoints
+> The application automatically initializes required tables and indexes on startup.
+
+---
+
+### ▶️ Run the Application
+
+```bash
+go run main.go
+```
+
+Server will start on:
+
+```
+http://localhost:8080
+```
+
+---
+
+## 🐳 Docker Setup
+
+Run the entire stack using Docker Compose:
+
+```bash
+docker-compose up --build
+```
+
+---
+
+## 📡 API Endpoints
 
 ### Stocks
 
-- `GET /stocks` - Get all stocks
-- `GET /stocks/{id}` - Get stock by ID
+| Method | Endpoint       | Description     |
+| ------ | -------------- | --------------- |
+| GET    | `/stocks`      | List all stocks |
+| GET    | `/stocks/{id}` | Get stock by ID |
 
 ### Predictions
 
-- `GET /stocks/{stockID}/predictions` - Get predictions for a stock
-- `POST /stocks/{stockID}/predictions/generate` - Generate new prediction
+| Method | Endpoint                                 | Description                 |
+| ------ | ---------------------------------------- | --------------------------- |
+| GET    | `/stocks/{stockID}/predictions`          | Get predictions for a stock |
+| POST   | `/stocks/{stockID}/predictions/generate` | Generate a new prediction   |
 
-## Configuration
+---
 
-The application uses the following environment variables:
+## 🔧 Configuration
 
-- `PORT`: Server port (default: 8080)
-- `DATABASE_URL`: PostgreSQL connection string
+Environment variables:
 
-## Development
+| Variable       | Description                  | Default |
+| -------------- | ---------------------------- | ------- |
+| `PORT`         | Server port                  | 8080    |
+| `DATABASE_URL` | PostgreSQL connection string | —       |
 
-### Running Tests
+---
+
+## 🧪 Testing
+
+Run all tests:
 
 ```bash
 go test ./...
 ```
 
-Run tests with verbose output:
+Verbose output:
 
 ```bash
 go test -v ./...
 ```
 
-Run tests with coverage:
+With coverage:
 
 ```bash
 go test -cover ./...
 ```
 
-Generate coverage report:
+Generate HTML coverage report:
 
 ```bash
 go test -coverprofile=coverage.out ./...
 go tool cover -html=coverage.out
 ```
 
-### Building
+---
+
+## 📦 Build
 
 ```bash
 go build -o bin/app main.go
 ```
 
-## Contributing
+---
+
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+3. Commit your changes
+4. Add tests where applicable
+5. Open a pull request
 
-## License
+---
 
-MIT License
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+## 📌 Future Improvements (Optional Ideas)
+
+* Authentication & authorization
+* Real-time market data integration
+* Advanced prediction models (ML/AI)
+* Caching layer (Redis)
+* Rate limiting & monitoring
+
+---
+
+## 💡 Notes
+
+This project is intended as a clean foundation for building scalable quantitative trading systems. You can extend it with custom strategies, analytics, or machine learning pipelines as needed.
