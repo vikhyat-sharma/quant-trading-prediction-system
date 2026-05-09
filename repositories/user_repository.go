@@ -2,12 +2,51 @@ package repositories
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/db"
 )
 
 type UserRepository struct {
 	db *sql.DB
+}
+
+// UserFilter holds filtering criteria for users
+type UserFilter struct {
+	Search string // Search by name or email
+}
+
+// SearchAndFilterUsers searches and filters users based on criteria
+func (r *UserRepository) SearchAndFilterUsers(filter *UserFilter) ([]*db.User, error) {
+	query := "SELECT id, name, email, created_at FROM users WHERE 1=1"
+	var args []interface{}
+	argCount := 1
+
+	if filter.Search != "" {
+		searchTerm := "%" + filter.Search + "%"
+		query += fmt.Sprintf(" AND (name ILIKE $%d OR email ILIKE $%d)", argCount, argCount)
+		args = append(args, searchTerm)
+		argCount++
+	}
+
+	query += " ORDER BY id"
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*db.User
+	for rows.Next() {
+		var user db.User
+		if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.CreatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, &user)
+	}
+
+	return users, nil
 }
 
 func NewUserRepository(database *sql.DB) *UserRepository {

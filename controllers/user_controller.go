@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/constants"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/db"
+	"github.com/vikhyat-sharma/quant-trading-prediction-system/repositories"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/services"
 )
 
@@ -20,7 +21,26 @@ func NewUserController(service *services.UserService) *UserController {
 }
 
 func (c *UserController) GetUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := c.service.GetAllUsers()
+	// Check for search/filter query parameters
+	search := r.URL.Query().Get("search")
+
+	// If no search parameters, return all users
+	if search == "" {
+		users, err := c.service.GetAllUsers()
+		if err != nil {
+			writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrieveUsers, err)
+			return
+		}
+		writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: users})
+		return
+	}
+
+	// Use search filter
+	filter := &repositories.UserFilter{
+		Search: search,
+	}
+
+	users, err := c.service.SearchAndFilterUsers(filter)
 	if err != nil {
 		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrieveUsers, err)
 		return
