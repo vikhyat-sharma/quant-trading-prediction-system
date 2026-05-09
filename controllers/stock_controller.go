@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/constants"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/db"
+	"github.com/vikhyat-sharma/quant-trading-prediction-system/repositories"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/services"
 )
 
@@ -49,7 +50,28 @@ func (c *StockController) GetStock(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *StockController) GetAllStocks(w http.ResponseWriter, r *http.Request) {
-	stocks, err := c.service.GetAllStocks()
+	// Check for search/filter query parameters
+	search := r.URL.Query().Get("search")
+	exchange := r.URL.Query().Get("exchange")
+
+	// If no search/filter parameters, return all stocks
+	if search == "" && exchange == "" {
+		stocks, err := c.service.GetAllStocks()
+		if err != nil {
+			writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrieveStocks, err)
+			return
+		}
+		writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: stocks})
+		return
+	}
+
+	// Use search and filter
+	filter := &repositories.StockFilter{
+		Search:   search,
+		Exchange: exchange,
+	}
+
+	stocks, err := c.service.SearchAndFilterStocks(filter)
 	if err != nil {
 		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrieveStocks, err)
 		return

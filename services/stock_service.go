@@ -21,6 +21,11 @@ func (s *StockService) GetAllStocks() ([]*db.Stock, error) {
 	return s.repo.GetAllStocks()
 }
 
+// SearchAndFilterStocks searches and filters stocks based on criteria
+func (s *StockService) SearchAndFilterStocks(filter *repositories.StockFilter) ([]*db.Stock, error) {
+	return s.repo.SearchAndFilterStocks(filter)
+}
+
 func (s *StockService) CreateStock(stock *db.Stock) (*db.Stock, error) {
 	if err := stock.Validate(); err != nil {
 		return nil, err
