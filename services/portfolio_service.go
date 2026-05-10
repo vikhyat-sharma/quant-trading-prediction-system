@@ -17,6 +17,10 @@ func (s *PortfolioService) GetPortfoliosByUserID(userID int) ([]*db.Portfolio, e
 	return s.repo.GetPortfoliosByUserID(userID)
 }
 
+func (s *PortfolioService) SearchAndFilterPortfolios(filter *repositories.PortfolioFilter) ([]*db.Portfolio, error) {
+	return s.repo.SearchAndFilterPortfolios(filter)
+}
+
 func (s *PortfolioService) GetPortfolioByID(userID, portfolioID int) (*db.Portfolio, error) {
 	return s.repo.GetPortfolioByID(userID, portfolioID)
 }

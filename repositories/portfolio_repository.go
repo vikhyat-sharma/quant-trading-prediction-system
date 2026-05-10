@@ -2,12 +2,57 @@ package repositories
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/db"
 )
 
 type PortfolioRepository struct {
 	db *sql.DB
+}
+
+// PortfolioFilter holds filtering criteria for portfolios
+type PortfolioFilter struct {
+	Search string // Search by portfolio name
+	UserID int    // Filter by user ID
+}
+
+// SearchAndFilterPortfolios searches and filters portfolios based on criteria
+func (r *PortfolioRepository) SearchAndFilterPortfolios(filter *PortfolioFilter) ([]*db.Portfolio, error) {
+	query := "SELECT id, user_id, name, description, created_at FROM portfolios WHERE 1=1"
+	var args []interface{}
+	argCount := 1
+
+	if filter.Search != "" {
+		query += fmt.Sprintf(" AND name ILIKE $%d", argCount)
+		args = append(args, "%"+filter.Search+"%")
+		argCount++
+	}
+
+	if filter.UserID > 0 {
+		query += fmt.Sprintf(" AND user_id = $%d", argCount)
+		args = append(args, filter.UserID)
+		argCount++
+	}
+
+	query += " ORDER BY id"
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var portfolios []*db.Portfolio
+	for rows.Next() {
+		var portfolio db.Portfolio
+		if err := rows.Scan(&portfolio.ID, &portfolio.UserID, &portfolio.Name, &portfolio.Description, &portfolio.CreatedAt); err != nil {
+			return nil, err
+		}
+		portfolios = append(portfolios, &portfolio)
+	}
+
+	return portfolios, nil
 }
 
 func NewPortfolioRepository(database *sql.DB) *PortfolioRepository {

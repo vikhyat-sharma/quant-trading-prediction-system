@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/constants"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/db"
+	"github.com/vikhyat-sharma/quant-trading-prediction-system/repositories"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/services"
 )
 
@@ -34,12 +35,32 @@ func (c *PortfolioController) GetPortfolios(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	portfolios, err := c.service.GetPortfoliosByUserID(userID)
-	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgPortfolioNotFound, nil)
+	// Check for search/filter query parameters
+	search := r.URL.Query().Get("search")
+
+	// If no search parameters, use traditional method
+	if search == "" {
+		portfolios, err := c.service.GetPortfoliosByUserID(userID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgPortfolioNotFound, nil)
+				return
+			}
+			writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolios, err)
 			return
 		}
+		writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: portfolios})
+		return
+	}
+
+	// Use search and filter
+	filter := &repositories.PortfolioFilter{
+		Search: search,
+		UserID: userID,
+	}
+
+	portfolios, err := c.service.SearchAndFilterPortfolios(filter)
+	if err != nil {
 		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolios, err)
 		return
 	}
