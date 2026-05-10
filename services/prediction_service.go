@@ -19,6 +19,10 @@ func (s *PredictionService) GetPredictionsByStockID(stockID int) ([]*db.Predicti
 	return s.repo.GetPredictionsByStockID(stockID)
 }
 
+func (s *PredictionService) SearchAndFilterPredictions(filter *repositories.PredictionFilter) ([]*db.Prediction, error) {
+	return s.repo.SearchAndFilterPredictions(filter)
+}
+
 // Mock prediction generation
 func (s *PredictionService) GeneratePrediction(stockID int) (*db.Prediction, error) {
 	// Simple mock: predict price as 100.0
