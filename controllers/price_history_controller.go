@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/constants"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/db"
+	"github.com/vikhyat-sharma/quant-trading-prediction-system/repositories"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/services"
 )
 
@@ -36,12 +37,70 @@ func (c *PriceHistoryController) GetPriceHistory(w http.ResponseWriter, r *http.
 		return
 	}
 
-	priceHistory, err := c.service.GetPriceHistoryByStockID(stockID)
-	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			writeErrorResponse(w, http.StatusNotFound, "No price history found for this stock", nil)
+	// Check for filter query parameters
+	startDateStr := r.URL.Query().Get("start_date")
+	endDateStr := r.URL.Query().Get("end_date")
+	minPriceStr := r.URL.Query().Get("min_price")
+	maxPriceStr := r.URL.Query().Get("max_price")
+
+	// If no filters provided, get all price history for the stock
+	if startDateStr == "" && endDateStr == "" && minPriceStr == "" && maxPriceStr == "" {
+		priceHistory, err := c.service.GetPriceHistoryByStockID(stockID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				writeErrorResponse(w, http.StatusNotFound, "No price history found for this stock", nil)
+				return
+			}
+			writeErrorResponse(w, http.StatusInternalServerError, "Failed to retrieve price history", err)
 			return
 		}
+		writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: priceHistory})
+		return
+	}
+
+	// Build filter from query parameters
+	filter := &repositories.PriceHistoryFilter{
+		StockID: stockID,
+	}
+
+	if startDateStr != "" {
+		startDate, err := time.Parse("2006-01-02", startDateStr)
+		if err != nil {
+			writeErrorResponse(w, http.StatusBadRequest, "Invalid start_date format (use YYYY-MM-DD)", err)
+			return
+		}
+		filter.StartDate = startDate
+	}
+
+	if endDateStr != "" {
+		endDate, err := time.Parse("2006-01-02", endDateStr)
+		if err != nil {
+			writeErrorResponse(w, http.StatusBadRequest, "Invalid end_date format (use YYYY-MM-DD)", err)
+			return
+		}
+		filter.EndDate = endDate.Add(time.Hour * 24)
+	}
+
+	if minPriceStr != "" {
+		minPrice, err := strconv.ParseFloat(minPriceStr, 64)
+		if err != nil {
+			writeErrorResponse(w, http.StatusBadRequest, "Invalid min_price format", err)
+			return
+		}
+		filter.MinPrice = minPrice
+	}
+
+	if maxPriceStr != "" {
+		maxPrice, err := strconv.ParseFloat(maxPriceStr, 64)
+		if err != nil {
+			writeErrorResponse(w, http.StatusBadRequest, "Invalid max_price format", err)
+			return
+		}
+		filter.MaxPrice = maxPrice
+	}
+
+	priceHistory, err := c.service.SearchAndFilterPriceHistory(filter)
+	if err != nil {
 		writeErrorResponse(w, http.StatusInternalServerError, "Failed to retrieve price history", err)
 		return
 	}

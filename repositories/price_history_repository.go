@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/db"
@@ -9,6 +10,75 @@ import (
 
 type PriceHistoryRepository struct {
 	db *sql.DB
+}
+
+// PriceHistoryFilter holds filtering criteria for price history
+type PriceHistoryFilter struct {
+	StockID   int       // Filter by stock ID
+	StartDate time.Time // Filter by start date (inclusive)
+	EndDate   time.Time // Filter by end date (inclusive)
+	MinPrice  float64   // Filter by minimum price
+	MaxPrice  float64   // Filter by maximum price
+}
+
+// SearchAndFilterPriceHistory searches and filters price history based on criteria
+func (r *PriceHistoryRepository) SearchAndFilterPriceHistory(filter *PriceHistoryFilter) ([]*db.PriceHistory, error) {
+	query := "SELECT id, stock_id, price, date, created_at FROM price_history WHERE 1=1"
+	var args []interface{}
+	argCount := 1
+
+	if filter.StockID > 0 {
+		query += fmt.Sprintf(" AND stock_id = $%d", argCount)
+		args = append(args, filter.StockID)
+		argCount++
+	}
+
+	if !filter.StartDate.IsZero() && !filter.EndDate.IsZero() {
+		query += fmt.Sprintf(" AND date BETWEEN $%d AND $%d", argCount, argCount+1)
+		args = append(args, filter.StartDate, filter.EndDate)
+		argCount += 2
+	} else if !filter.StartDate.IsZero() {
+		query += fmt.Sprintf(" AND date >= $%d", argCount)
+		args = append(args, filter.StartDate)
+		argCount++
+	} else if !filter.EndDate.IsZero() {
+		query += fmt.Sprintf(" AND date <= $%d", argCount)
+		args = append(args, filter.EndDate)
+		argCount++
+	}
+
+	if filter.MinPrice > 0 && filter.MaxPrice > 0 {
+		query += fmt.Sprintf(" AND price BETWEEN $%d AND $%d", argCount, argCount+1)
+		args = append(args, filter.MinPrice, filter.MaxPrice)
+		argCount += 2
+	} else if filter.MinPrice > 0 {
+		query += fmt.Sprintf(" AND price >= $%d", argCount)
+		args = append(args, filter.MinPrice)
+		argCount++
+	} else if filter.MaxPrice > 0 {
+		query += fmt.Sprintf(" AND price <= $%d", argCount)
+		args = append(args, filter.MaxPrice)
+		argCount++
+	}
+
+	query += " ORDER BY date DESC"
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var priceHistories []*db.PriceHistory
+	for rows.Next() {
+		var price db.PriceHistory
+		if err := rows.Scan(&price.ID, &price.StockID, &price.Price, &price.Date, &price.CreatedAt); err != nil {
+			return nil, err
+		}
+		priceHistories = append(priceHistories, &price)
+	}
+
+	return priceHistories, nil
 }
 
 func NewPriceHistoryRepository(database *sql.DB) *PriceHistoryRepository {

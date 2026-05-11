@@ -19,6 +19,10 @@ func (s *PriceHistoryService) GetPriceHistoryByStockID(stockID int) ([]*db.Price
 	return s.repo.GetPriceHistoryByStockID(stockID)
 }
 
+func (s *PriceHistoryService) SearchAndFilterPriceHistory(filter *repositories.PriceHistoryFilter) ([]*db.PriceHistory, error) {
+	return s.repo.SearchAndFilterPriceHistory(filter)
+}
+
 func (s *PriceHistoryService) GetPriceHistoryByDateRange(stockID int, startDate, endDate string) ([]*db.PriceHistory, error) {
 	startTime, err := time.Parse("2006-01-02", startDate)
 	if err != nil {
