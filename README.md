@@ -112,12 +112,133 @@ docker-compose up --build
 | GET    | `/stocks`      | List all stocks |
 | GET    | `/stocks/{id}` | Get stock by ID |
 
+#### Stock Search & Filtering
+
+Query parameters for `/stocks`:
+- `search` - Search by stock symbol or name (case-insensitive)
+- `exchange` - Filter by exchange (case-insensitive)
+
+**Example:**
+```bash
+# Search for stocks matching "apple"
+GET /stocks?search=apple
+
+# Filter stocks by exchange
+GET /stocks?exchange=NYSE
+
+# Combine search and filter
+GET /stocks?search=tech&exchange=NASDAQ
+```
+
+### Users
+
+| Method | Endpoint       | Description     |
+| ------ | -------------- | --------------- |
+| GET    | `/users`       | List all users  |
+| GET    | `/users/{id}`  | Get user by ID  |
+
+#### User Search & Filtering
+
+Query parameters for `/users`:
+- `search` - Search by name or email (case-insensitive)
+
+**Example:**
+```bash
+# Search for users matching "john"
+GET /users?search=john
+
+# Search by email
+GET /users?search=john@example.com
+```
+
 ### Predictions
 
 | Method | Endpoint                                 | Description                 |
 | ------ | ---------------------------------------- | --------------------------- |
 | GET    | `/stocks/{stockID}/predictions`          | Get predictions for a stock |
 | POST   | `/stocks/{stockID}/predictions/generate` | Generate a new prediction   |
+
+#### Prediction Search & Filtering
+
+Query parameters for `/stocks/{stockID}/predictions`:
+- `start_date` - Filter predictions from this date (format: YYYY-MM-DD)
+- `end_date` - Filter predictions until this date (format: YYYY-MM-DD)
+- `min_price` - Filter predictions with minimum price
+- `max_price` - Filter predictions with maximum price
+
+**Example:**
+```bash
+# Get predictions between two dates
+GET /stocks/1/predictions?start_date=2024-01-01&end_date=2024-12-31
+
+# Get predictions within a price range
+GET /stocks/1/predictions?min_price=100&max_price=200
+
+# Combine filters
+GET /stocks/1/predictions?start_date=2024-06-01&min_price=150&max_price=300
+```
+
+### Price History
+
+| Method | Endpoint                       | Description                  |
+| ------ | ------------------------------ | ---------------------------- |
+| GET    | `/stocks/{stockID}/price-history` | Get price history for stock |
+| POST   | `/stocks/{stockID}/price-history` | Record new price            |
+| GET    | `/stocks/{stockID}/price-history/range` | Get price history by date range |
+
+#### Price History Search & Filtering
+
+Query parameters for `/stocks/{stockID}/price-history`:
+- `start_date` - Filter prices from this date (format: YYYY-MM-DD)
+- `end_date` - Filter prices until this date (format: YYYY-MM-DD)
+- `min_price` - Filter prices with minimum value
+- `max_price` - Filter prices with maximum value
+
+**Example:**
+```bash
+# Get price history for a date range
+GET /stocks/1/price-history?start_date=2024-01-01&end_date=2024-12-31
+
+# Get prices within a range
+GET /stocks/1/price-history?min_price=50&max_price=150
+
+# Get volatile prices
+GET /stocks/1/price-history?start_date=2024-06-01&min_price=100&max_price=200
+```
+
+### Portfolios
+
+| Method | Endpoint                                    | Description                |
+| ------ | ------------------------------------------- | -------------------------- |
+| GET    | `/users/{userID}/portfolios`                | List user portfolios       |
+| POST   | `/users/{userID}/portfolios`                | Create new portfolio       |
+| GET    | `/users/{userID}/portfolios/{portfolioID}` | Get portfolio by ID        |
+| PUT    | `/users/{userID}/portfolios/{portfolioID}` | Update portfolio           |
+| DELETE | `/users/{userID}/portfolios/{portfolioID}` | Delete portfolio           |
+
+#### Portfolio Search & Filtering
+
+Query parameters for `/users/{userID}/portfolios`:
+- `search` - Search by portfolio name (case-insensitive)
+
+**Example:**
+```bash
+# Search for portfolios by name
+GET /users/1/portfolios?search=conservative
+
+# Filter specific user's portfolios
+GET /users/1/portfolios?search=tech
+```
+
+### Alerts
+
+| Method | Endpoint                                | Description               |
+| ------ | --------------------------------------- | ------------------------- |
+| GET    | `/stocks/{stockID}/alerts`              | Get alerts for stock      |
+| POST   | `/stocks/{stockID}/alerts`              | Create alert              |
+| DELETE | `/stocks/{stockID}/alerts/{alertID}`    | Delete alert              |
+| POST   | `/stocks/{stockID}/alerts/evaluate`     | Evaluate all alerts       |
+| GET    | `/stocks/{stockID}/notifications`       | Get notifications         |
 
 ---
 
@@ -129,6 +250,25 @@ Environment variables:
 | -------------- | ---------------------------- | ------- |
 | `PORT`         | Server port                  | 8080    |
 | `DATABASE_URL` | PostgreSQL connection string | —       |
+
+---
+
+## 🔍 Filtering & Search Features
+
+The API supports flexible filtering and searching across multiple endpoints:
+
+### Search Syntax
+- **Text Search**: Case-insensitive partial matching on specified fields
+- **Date Filtering**: ISO 8601 format (YYYY-MM-DD)
+- **Range Filtering**: Numeric ranges with min/max boundaries
+- **Combined Filters**: All filters can be combined in a single request
+
+### Common Filter Parameters
+- `search` - Text-based search across relevant fields
+- `start_date` / `end_date` - Date range filtering
+- `min_price` / `max_price` - Price range filtering
+
+All filters are optional and can be combined for more specific queries.
 
 ---
 
