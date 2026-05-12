@@ -23,7 +23,7 @@ type PredictionFilter struct {
 
 // SearchAndFilterPredictions searches and filters predictions based on criteria
 func (r *PredictionRepository) SearchAndFilterPredictions(filter *PredictionFilter) ([]*db.Prediction, error) {
-	query := "SELECT id, stock_id, predicted_price, date FROM predictions WHERE 1=1"
+	query := "SELECT id, stock_id, predicted_price, algorithm, confidence_score, upper_bound, lower_bound, date, created_at FROM predictions WHERE 1=1"
 	var args []interface{}
 	argCount := 1
 
@@ -72,7 +72,7 @@ func (r *PredictionRepository) SearchAndFilterPredictions(filter *PredictionFilt
 	var predictions []*db.Prediction
 	for rows.Next() {
 		var prediction db.Prediction
-		if err := rows.Scan(&prediction.ID, &prediction.StockID, &prediction.PredictedPrice, &prediction.Date); err != nil {
+		if err := rows.Scan(&prediction.ID, &prediction.StockID, &prediction.PredictedPrice, &prediction.Algorithm, &prediction.ConfidenceScore, &prediction.UpperBound, &prediction.LowerBound, &prediction.Date, &prediction.CreatedAt); err != nil {
 			return nil, err
 		}
 		predictions = append(predictions, &prediction)
@@ -86,7 +86,7 @@ func NewPredictionRepository(db *sql.DB) *PredictionRepository {
 }
 
 func (r *PredictionRepository) GetPredictionsByStockID(stockID int) ([]*db.Prediction, error) {
-	rows, err := r.db.Query("SELECT id, stock_id, predicted_price, date FROM predictions WHERE stock_id = $1", stockID)
+	rows, err := r.db.Query("SELECT id, stock_id, predicted_price, algorithm, confidence_score, upper_bound, lower_bound, date, created_at FROM predictions WHERE stock_id = $1 ORDER BY date DESC", stockID)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (r *PredictionRepository) GetPredictionsByStockID(stockID int) ([]*db.Predi
 	var predictions []*db.Prediction
 	for rows.Next() {
 		var prediction db.Prediction
-		err := rows.Scan(&prediction.ID, &prediction.StockID, &prediction.PredictedPrice, &prediction.Date)
+		err := rows.Scan(&prediction.ID, &prediction.StockID, &prediction.PredictedPrice, &prediction.Algorithm, &prediction.ConfidenceScore, &prediction.UpperBound, &prediction.LowerBound, &prediction.Date, &prediction.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -105,13 +105,15 @@ func (r *PredictionRepository) GetPredictionsByStockID(stockID int) ([]*db.Predi
 
 func (r *PredictionRepository) CreatePrediction(prediction *db.Prediction) (*db.Prediction, error) {
 	var id int
+	var createdAt time.Time
 	err := r.db.QueryRow(
-		"INSERT INTO predictions (stock_id, predicted_price, date) VALUES ($1, $2, $3) RETURNING id",
-		prediction.StockID, prediction.PredictedPrice, prediction.Date,
-	).Scan(&id)
+		"INSERT INTO predictions (stock_id, predicted_price, algorithm, confidence_score, upper_bound, lower_bound, date) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at",
+		prediction.StockID, prediction.PredictedPrice, prediction.Algorithm, prediction.ConfidenceScore, prediction.UpperBound, prediction.LowerBound, prediction.Date,
+	).Scan(&id, &createdAt)
 	if err != nil {
 		return nil, err
 	}
 	prediction.ID = id
+	prediction.CreatedAt = createdAt
 	return prediction, nil
 }
