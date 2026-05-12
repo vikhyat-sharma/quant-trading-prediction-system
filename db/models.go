@@ -19,25 +19,39 @@ type Stock struct {
 
 // Prediction represents a price prediction for a stock
 type Prediction struct {
-	ID             int       `json:"id" db:"id"`
-	StockID        int       `json:"stock_id" db:"stock_id"`
-	PredictedPrice float64   `json:"predicted_price" db:"predicted_price"`
-	Date           time.Time `json:"date" db:"date"`
+	ID              int       `json:"id" db:"id"`
+	StockID         int       `json:"stock_id" db:"stock_id"`
+	PredictedPrice  float64   `json:"predicted_price" db:"predicted_price"`
+	Algorithm       string    `json:"algorithm" db:"algorithm"`
+	ConfidenceScore float64   `json:"confidence_score" db:"confidence_score"`
+	UpperBound      float64   `json:"upper_bound" db:"upper_bound"`
+	LowerBound      float64   `json:"lower_bound" db:"lower_bound"`
+	Date            time.Time `json:"date" db:"date"`
+	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 }
 
 type User struct {
 	ID        int       `json:"id" db:"id"`
 	Name      string    `json:"name" db:"name"`
 	Email     string    `json:"email" db:"email"`
+	Password  string    `json:"-" db:"password"`
+	Role      string    `json:"role" db:"role"`
+	IsActive  bool      `json:"is_active" db:"is_active"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type Portfolio struct {
-	ID          int       `json:"id" db:"id"`
-	UserID      int       `json:"user_id" db:"user_id"`
-	Name        string    `json:"name" db:"name"`
-	Description string    `json:"description" db:"description"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	ID            int       `json:"id" db:"id"`
+	UserID        int       `json:"user_id" db:"user_id"`
+	Name          string    `json:"name" db:"name"`
+	Description   string    `json:"description" db:"description"`
+	TotalValue    float64   `json:"total_value" db:"total_value"`
+	CostBasis     float64   `json:"cost_basis" db:"cost_basis"`
+	GainLoss      float64   `json:"gain_loss" db:"gain_loss"`
+	ReturnPercent float64   `json:"return_percent" db:"return_percent"`
+	LastUpdated   time.Time `json:"last_updated" db:"last_updated"`
+	CreatedAt     time.Time `json:"created_at" db:"created_at"`
 }
 
 type PortfolioItem struct {
