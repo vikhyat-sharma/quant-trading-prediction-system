@@ -171,3 +171,32 @@ func (r *PriceHistoryRepository) GetLatestPrice(stockID int) (*db.PriceHistory, 
 	}
 	return &price, nil
 }
+
+// GetHistoricalPrices gets the last N prices for a stock in chronological order
+func (r *PriceHistoryRepository) GetHistoricalPrices(stockID int, limit int) ([]*db.PriceHistory, error) {
+	rows, err := r.db.Query(
+		"SELECT id, stock_id, price, date, created_at FROM price_history WHERE stock_id = $1 ORDER BY date DESC LIMIT $2",
+		stockID, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var priceHistories []*db.PriceHistory
+	for rows.Next() {
+		var price db.PriceHistory
+		err := rows.Scan(&price.ID, &price.StockID, &price.Price, &price.Date, &price.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		priceHistories = append(priceHistories, &price)
+	}
+
+	// Reverse to get chronological order
+	for i, j := 0, len(priceHistories)-1; i < j; i, j = i+1, j-1 {
+		priceHistories[i], priceHistories[j] = priceHistories[j], priceHistories[i]
+	}
+
+	return priceHistories, nil
+}
