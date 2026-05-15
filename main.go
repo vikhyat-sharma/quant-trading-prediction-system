@@ -43,7 +43,7 @@ func main() {
 	portfolioRepo := repositories.NewPortfolioRepository(database)
 
 	stockService := services.NewStockService(stockRepo)
-	predictionService := services.NewPredictionService(predictionRepo)
+	predictionService := services.NewPredictionService(predictionRepo, priceHistoryRepo)
 	priceHistoryService := services.NewPriceHistoryService(priceHistoryRepo)
 	alertService := services.NewAlertService(alertRepo, notificationRepo, priceHistoryRepo, stockRepo)
 	userService := services.NewUserService(userRepo)
