@@ -8,7 +8,7 @@ import (
 func TestPredictionService_NewPredictionService(t *testing.T) {
 	// This test verifies that the PredictionService constructor works
 	// In a real scenario with dependency injection, you'd test with mocked repositories
-	service := NewPredictionService(nil)
+	service := NewPredictionService(nil, nil)
 
 	if service == nil {
 		t.Errorf("expected PredictionService, got nil")
@@ -17,7 +17,7 @@ func TestPredictionService_NewPredictionService(t *testing.T) {
 
 // Test that GeneratePrediction returns a prediction with expected fields
 func TestPredictionService_GeneratePrediction_Fields(t *testing.T) {
-	service := NewPredictionService(nil)
+	service := NewPredictionService(nil, nil)
 
 	prediction, err := service.GeneratePrediction(1)
 
