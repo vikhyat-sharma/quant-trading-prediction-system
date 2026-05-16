@@ -4,9 +4,11 @@ go 1.25.3
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/gorilla/mux v1.8.1
 	github.com/lib/pq v1.12.2
 	github.com/spf13/viper v1.21.0
+	golang.org/x/crypto v0.51.0
 )
 
 require (
@@ -20,6 +22,6 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 )
