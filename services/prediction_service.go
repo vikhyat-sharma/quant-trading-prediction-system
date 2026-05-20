@@ -58,6 +58,10 @@ func (s *PredictionService) GeneratePrediction(stockID int) (*db.Prediction, err
 
 // GeneratePredictionWithAlgorithm generates a prediction using a specific algorithm
 func (s *PredictionService) GeneratePredictionWithAlgorithm(stockID int, algorithmType string) (*db.Prediction, error) {
+	if s.priceHistoryRepo == nil {
+		return nil, fmt.Errorf("price history repository not initialized")
+	}
+
 	// Get historical price data
 	prices, err := s.priceHistoryRepo.GetHistoricalPrices(stockID, s.lookbackPeriod)
 	if err != nil {
