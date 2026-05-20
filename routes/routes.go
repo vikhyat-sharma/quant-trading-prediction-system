@@ -7,7 +7,7 @@ import (
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/middleware"
 )
 
-func SetupRoutes(stockController *controllers.StockController, predictionController *controllers.PredictionController, priceHistoryController *controllers.PriceHistoryController, alertController *controllers.AlertController, userController *controllers.UserController, portfolioController *controllers.PortfolioController) *mux.Router {
+func SetupRoutes(stockController *controllers.StockController, predictionController *controllers.PredictionController, priceHistoryController *controllers.PriceHistoryController, alertController *controllers.AlertController, userController *controllers.UserController, portfolioController *controllers.PortfolioController, sentimentController *controllers.SentimentController) *mux.Router {
 	r := mux.NewRouter()
 
 	// Apply middleware to all routes
@@ -25,6 +25,7 @@ func SetupRoutes(stockController *controllers.StockController, predictionControl
 	// Prediction routes
 	r.HandleFunc(constants.RouteStockPredictions, predictionController.GetPredictions).Methods(constants.MethodGET)
 	r.HandleFunc(constants.RouteStockPredictionsGenerate, predictionController.GeneratePrediction).Methods(constants.MethodPOST)
+	r.HandleFunc(constants.RouteStockSentiment, sentimentController.AnalyzeSentiment).Methods(constants.MethodPOST)
 
 	// Price History routes
 	r.HandleFunc(constants.RouteStockPriceHistory, priceHistoryController.GetPriceHistory).Methods(constants.MethodGET)
