@@ -42,7 +42,7 @@ func (s *SentimentService) Analyze(text string) *SentimentAnalysisResult {
 	cleanText := strings.ToLower(result.Text)
 	cleanText = regexp.MustCompile(`[^a-z0-9\s]`).ReplaceAllString(cleanText, " ")
 
-tokens := strings.Fields(cleanText)
+	tokens := strings.Fields(cleanText)
 	for _, token := range tokens {
 		if token == "" {
 			continue
