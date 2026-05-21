@@ -16,11 +16,11 @@ func TestPredictionRepository_GetPredictionsByStockID_Success(t *testing.T) {
 	defer mockDB.Close()
 
 	now := time.Now()
-	rows := sqlmock.NewRows([]string{"id", "stock_id", "predicted_price", "date"}).
-		AddRow(1, 1, 150.50, now).
-		AddRow(2, 1, 155.75, now)
+	rows := sqlmock.NewRows([]string{"id", "stock_id", "predicted_price", "algorithm", "confidence_score", "upper_bound", "lower_bound", "date", "created_at"}).
+		AddRow(1, 1, 150.50, "ENSEMBLE", 0.75, 155.0, 145.0, now, now).
+		AddRow(2, 1, 155.75, "ENSEMBLE", 0.73, 160.0, 150.0, now, now)
 
-	mock.ExpectQuery("SELECT id, stock_id, predicted_price, date FROM predictions WHERE stock_id = \\$1").
+	mock.ExpectQuery("SELECT id, stock_id, predicted_price, algorithm, confidence_score, upper_bound, lower_bound, date, created_at FROM predictions WHERE stock_id = \\$1 ORDER BY date DESC").
 		WithArgs(1).
 		WillReturnRows(rows)
 
@@ -51,9 +51,9 @@ func TestPredictionRepository_GetPredictionsByStockID_Empty(t *testing.T) {
 	}
 	defer mockDB.Close()
 
-	rows := sqlmock.NewRows([]string{"id", "stock_id", "predicted_price", "date"})
+	rows := sqlmock.NewRows([]string{"id", "stock_id", "predicted_price", "algorithm", "confidence_score", "upper_bound", "lower_bound", "date", "created_at"})
 
-	mock.ExpectQuery("SELECT id, stock_id, predicted_price, date FROM predictions WHERE stock_id = \\$1").
+	mock.ExpectQuery("SELECT id, stock_id, predicted_price, algorithm, confidence_score, upper_bound, lower_bound, date, created_at FROM predictions WHERE stock_id = \\$1 ORDER BY date DESC").
 		WithArgs(9999).
 		WillReturnRows(rows)
 
@@ -80,7 +80,7 @@ func TestPredictionRepository_GetPredictionsByStockID_Error(t *testing.T) {
 	}
 	defer mockDB.Close()
 
-	mock.ExpectQuery("SELECT id, stock_id, predicted_price, date FROM predictions WHERE stock_id = \\$1").
+	mock.ExpectQuery("SELECT id, stock_id, predicted_price, algorithm, confidence_score, upper_bound, lower_bound, date, created_at FROM predictions WHERE stock_id = \\$1 ORDER BY date DESC").
 		WithArgs(1).
 		WillReturnError(sql.ErrConnDone)
 
