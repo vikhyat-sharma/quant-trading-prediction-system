@@ -157,6 +157,7 @@ GET /users?search=john@example.com
 | ------ | ---------------------------------------- | --------------------------- |
 | GET    | `/stocks/{stockID}/predictions`          | Get predictions for a stock |
 | POST   | `/stocks/{stockID}/predictions/generate` | Generate a new prediction   |
+| POST   | `/stocks/{stockID}/sentiment`            | Analyze sentiment for stock |
 
 #### Prediction Search & Filtering
 
