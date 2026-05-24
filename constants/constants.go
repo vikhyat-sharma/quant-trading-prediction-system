@@ -146,6 +146,12 @@ const (
 	RouteUserPortfolioByID        = "/users/{userID}/portfolios/{portfolioID}"
 	RouteUserPortfolioHoldings    = "/users/{userID}/portfolios/{portfolioID}/holdings"
 	RouteUserPortfolioHoldingByID = "/users/{userID}/portfolios/{portfolioID}/holdings/{holdingID}"
+	RouteUserWatchlists           = "/users/{userID}/watchlists"
+	RouteUserWatchlistByID        = "/users/{userID}/watchlists/{watchlistID}"
+	RouteUserWatchlistItems       = "/users/{userID}/watchlists/{watchlistID}/items"
+	RouteUserWatchlistItemByID    = "/users/{userID}/watchlists/{watchlistID}/items/{stockID}"
+	RouteUserAlertRules           = "/users/{userID}/alert-rules"
+	RouteUserAlertRuleByID        = "/users/{userID}/alert-rules/{ruleID}"
 )
 
 // Server Settings
