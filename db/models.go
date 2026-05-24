@@ -95,6 +95,33 @@ type Notification struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
+// UserWatchlist represents a user's watchlist
+type UserWatchlist struct {
+	ID        int       `json:"id" db:"id"`
+	UserID    int       `json:"user_id" db:"user_id"`
+	Name      string    `json:"name" db:"name"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
+// WatchlistItem represents a stock in a user's watchlist
+type WatchlistItem struct {
+	ID          int       `json:"id" db:"id"`
+	WatchlistID int       `json:"watchlist_id" db:"watchlist_id"`
+	StockID     int       `json:"stock_id" db:"stock_id"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+}
+
+// UserAlertRule represents a user-specific alert rule
+type UserAlertRule struct {
+	ID        int       `json:"id" db:"id"`
+	UserID    int       `json:"user_id" db:"user_id"`
+	StockID   int       `json:"stock_id" db:"stock_id"`
+	Threshold float64   `json:"threshold" db:"threshold"`
+	Condition string    `json:"condition" db:"condition"`
+	Enabled   bool      `json:"enabled" db:"enabled"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
 // Validate checks if the stock data is valid
 func (s *Stock) Validate() error {
 	if s.Symbol == "" {
