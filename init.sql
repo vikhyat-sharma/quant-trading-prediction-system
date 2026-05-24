@@ -85,6 +85,40 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create user watchlists table
+CREATE TABLE IF NOT EXISTS user_watchlists (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create watchlist items table
+CREATE TABLE IF NOT EXISTS watchlist_items (
+    id SERIAL PRIMARY KEY,
+    watchlist_id INTEGER NOT NULL REFERENCES user_watchlists(id) ON DELETE CASCADE,
+    stock_id INTEGER NOT NULL REFERENCES stocks(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create user alert rules table
+CREATE TABLE IF NOT EXISTS user_alert_rules (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    stock_id INTEGER NOT NULL REFERENCES stocks(id) ON DELETE CASCADE,
+    threshold DECIMAL(10,2) NOT NULL,
+    condition VARCHAR(50) NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for watchlists and alert rules
+CREATE INDEX IF NOT EXISTS idx_user_watchlists_user_id ON user_watchlists(user_id);
+CREATE INDEX IF NOT EXISTS idx_watchlist_items_watchlist_id ON watchlist_items(watchlist_id);
+CREATE INDEX IF NOT EXISTS idx_watchlist_items_stock_id ON watchlist_items(stock_id);
+CREATE INDEX IF NOT EXISTS idx_user_alert_rules_user_id ON user_alert_rules(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_alert_rules_stock_id ON user_alert_rules(stock_id);
+
 -- Create prediction metrics table for accuracy tracking
 CREATE TABLE IF NOT EXISTS prediction_metrics (
     id SERIAL PRIMARY KEY,
