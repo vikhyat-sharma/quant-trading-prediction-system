@@ -207,6 +207,18 @@ GET /stocks/1/price-history?min_price=50&max_price=150
 GET /stocks/1/price-history?start_date=2024-06-01&min_price=100&max_price=200
 ```
 
+
+### User Watchlists
+
+| Method | Endpoint                                                    | Description                        |
+| ------ | ----------------------------------------------------------- | ---------------------------------- |
+| GET    | `/users/{userID}/watchlists`                                | List all watchlists for user       |
+| POST   | `/users/{userID}/watchlists`                                | Create a new watchlist             |
+| DELETE | `/users/{userID}/watchlists/{watchlistID}`                  | Delete a watchlist                 |
+| GET    | `/users/{userID}/watchlists/{watchlistID}/items`            | List all stocks in a watchlist     |
+| POST   | `/users/{userID}/watchlists/{watchlistID}/items`            | Add a stock to a watchlist         |
+| DELETE | `/users/{userID}/watchlists/{watchlistID}/items/{stockID}`  | Remove a stock from a watchlist    |
+
 ### Portfolios
 
 | Method | Endpoint                                    | Description                |
