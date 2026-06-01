@@ -219,6 +219,14 @@ GET /stocks/1/price-history?start_date=2024-06-01&min_price=100&max_price=200
 | POST   | `/users/{userID}/watchlists/{watchlistID}/items`            | Add a stock to a watchlist         |
 | DELETE | `/users/{userID}/watchlists/{watchlistID}/items/{stockID}`  | Remove a stock from a watchlist    |
 
+### User Alert Rules
+
+| Method | Endpoint                                         | Description                        |
+| ------ | ------------------------------------------------ | ---------------------------------- |
+| GET    | `/users/{userID}/alert-rules`                    | List all alert rules for user      |
+| POST   | `/users/{userID}/alert-rules`                    | Create a new alert rule            |
+| DELETE | `/users/{userID}/alert-rules/{ruleID}`           | Delete an alert rule               |
+
 ### Portfolios
 
 | Method | Endpoint                                    | Description                |
