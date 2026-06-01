@@ -7,7 +7,17 @@ import (
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/middleware"
 )
 
-func SetupRoutes(stockController *controllers.StockController, predictionController *controllers.PredictionController, priceHistoryController *controllers.PriceHistoryController, alertController *controllers.AlertController, userController *controllers.UserController, portfolioController *controllers.PortfolioController, sentimentController *controllers.SentimentController) *mux.Router {
+func SetupRoutes(
+	stockController *controllers.StockController,
+	predictionController *controllers.PredictionController,
+	priceHistoryController *controllers.PriceHistoryController,
+	alertController *controllers.AlertController,
+	userController *controllers.UserController,
+	portfolioController *controllers.PortfolioController,
+	sentimentController *controllers.SentimentController,
+	watchlistController *controllers.WatchlistController,
+	userAlertRuleController *controllers.UserAlertRuleController,
+) *mux.Router {
 	r := mux.NewRouter()
 
 	// Apply middleware to all routes
@@ -58,6 +68,19 @@ func SetupRoutes(stockController *controllers.StockController, predictionControl
 	r.HandleFunc(constants.RouteUserPortfolioHoldings, portfolioController.AddHolding).Methods(constants.MethodPOST)
 	r.HandleFunc(constants.RouteUserPortfolioHoldingByID, portfolioController.UpdateHolding).Methods(constants.MethodPUT)
 	r.HandleFunc(constants.RouteUserPortfolioHoldingByID, portfolioController.DeleteHolding).Methods(constants.MethodDELETE)
+
+	// User Watchlist routes
+	r.HandleFunc(constants.RouteUserWatchlists, watchlistController.GetWatchlists).Methods(constants.MethodGET)
+	r.HandleFunc(constants.RouteUserWatchlists, watchlistController.CreateWatchlist).Methods(constants.MethodPOST)
+	r.HandleFunc(constants.RouteUserWatchlistByID, watchlistController.DeleteWatchlist).Methods(constants.MethodDELETE)
+	r.HandleFunc(constants.RouteUserWatchlistItems, watchlistController.GetItems).Methods(constants.MethodGET)
+	r.HandleFunc(constants.RouteUserWatchlistItems, watchlistController.AddStock).Methods(constants.MethodPOST)
+	r.HandleFunc(constants.RouteUserWatchlistItemByID, watchlistController.RemoveStock).Methods(constants.MethodDELETE)
+
+	// User Alert Rule routes
+	r.HandleFunc(constants.RouteUserAlertRules, userAlertRuleController.GetAlertRules).Methods(constants.MethodGET)
+	r.HandleFunc(constants.RouteUserAlertRules, userAlertRuleController.CreateAlertRule).Methods(constants.MethodPOST)
+	r.HandleFunc(constants.RouteUserAlertRuleByID, userAlertRuleController.DeleteAlertRule).Methods(constants.MethodDELETE)
 
 	return r
 }
