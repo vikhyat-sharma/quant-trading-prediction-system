@@ -50,6 +50,15 @@ func main() {
 	portfolioService := services.NewPortfolioService(portfolioRepo)
 	sentimentService := services.NewSentimentService()
 
+	// Watchlist and alert rule setup
+	watchlistRepo := repositories.NewWatchlistRepository(database)
+	watchlistService := services.NewWatchlistService(watchlistRepo)
+	watchlistController := controllers.NewWatchlistController(watchlistService)
+
+	userAlertRuleRepo := repositories.NewUserAlertRuleRepository(database)
+	userAlertRuleService := services.NewUserAlertRuleService(userAlertRuleRepo)
+	userAlertRuleController := controllers.NewUserAlertRuleController(userAlertRuleService)
+
 	stockController := controllers.NewStockController(stockService)
 	predictionController := controllers.NewPredictionController(predictionService)
 	priceHistoryController := controllers.NewPriceHistoryController(priceHistoryService)
@@ -58,7 +67,17 @@ func main() {
 	portfolioController := controllers.NewPortfolioController(portfolioService)
 	sentimentController := controllers.NewSentimentController(sentimentService)
 
-	router := routes.SetupRoutes(stockController, predictionController, priceHistoryController, alertController, userController, portfolioController, sentimentController)
+	router := routes.SetupRoutes(
+		stockController,
+		predictionController,
+		priceHistoryController,
+		alertController,
+		userController,
+		portfolioController,
+		sentimentController,
+		watchlistController,
+		userAlertRuleController,
+	)
 
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,
