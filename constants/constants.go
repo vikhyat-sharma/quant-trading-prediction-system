@@ -131,6 +131,7 @@ const (
 	RouteStockByID                = "/stocks/{id}"
 	RouteStockPredictions         = "/stocks/{stockID}/predictions"
 	RouteStockPredictionsGenerate = "/stocks/{stockID}/predictions/generate"
+	RouteStockBacktest            = "/stocks/{stockID}/backtest"
 	RouteStockSentiment           = "/stocks/{stockID}/sentiment"
 	RouteStockPriceHistory        = "/stocks/{stockID}/price-history"
 	RouteStockPriceHistoryRange   = "/stocks/{stockID}/price-history/range"
