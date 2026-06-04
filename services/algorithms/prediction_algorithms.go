@@ -13,6 +13,19 @@ type PredictionResult struct {
 	Algorithm       string
 }
 
+type BacktestResult struct {
+	Strategy            string    `json:"strategy"`
+	TotalReturn         float64   `json:"total_return"`
+	AnnualizedReturn    float64   `json:"annualized_return"`
+	WinRate             float64   `json:"win_rate"`
+	MaxDrawdown         float64   `json:"max_drawdown"`
+	Trades              int       `json:"trades"`
+	PositiveTrades      int       `json:"positive_trades"`
+	NegativeTrades      int       `json:"negative_trades"`
+	EquityCurve         []float64 `json:"equity_curve"`
+	DailyReturns        []float64 `json:"daily_returns"`
+}
+
 // TechnicalIndicators holds calculated technical indicators
 type TechnicalIndicators struct {
 	SMA20      float64 // 20-day Simple Moving Average
@@ -316,6 +329,79 @@ func EnsemblePrediction(prices []float64) *PredictionResult {
 		LowerBound:      predictedPrice - variation,
 		Algorithm:       "ENSEMBLE",
 	}
+}
+
+func BacktestStrategy(prices []float64, algorithm func([]float64) *PredictionResult) *BacktestResult {
+	result := &BacktestResult{
+		Strategy:     "UNKNOWN",
+		EquityCurve:  make([]float64, 0),
+		DailyReturns: make([]float64, 0),
+	}
+
+	if algorithm == nil || len(prices) < 2 {
+		return result
+	}
+
+	firstPrediction := algorithm(prices[:1])
+	if firstPrediction != nil {
+		result.Strategy = firstPrediction.Algorithm
+	}
+
+	equity := 1.0
+	peak := 1.0
+	positiveTrades := 0
+	negativeTrades := 0
+	trades := 0
+
+	for i := 1; i < len(prices); i++ {
+		window := prices[:i]
+		currentPrice := prices[i-1]
+		nextPrice := prices[i]
+
+		prediction := algorithm(window)
+		if prediction == nil {
+			result.EquityCurve = append(result.EquityCurve, equity)
+			result.DailyReturns = append(result.DailyReturns, 0)
+			continue
+		}
+
+		tradeReturn := 0.0
+		if prediction.PredictedPrice > currentPrice {
+			tradeReturn = (nextPrice - currentPrice) / currentPrice
+			trades++
+			if tradeReturn > 0 {
+				positiveTrades++
+			} else if tradeReturn < 0 {
+				negativeTrades++
+			}
+		}
+
+		equity *= 1 + tradeReturn
+		if equity > peak {
+			peak = equity
+		}
+		maxDrawdown := (peak - equity) / peak
+		if maxDrawdown > result.MaxDrawdown {
+			result.MaxDrawdown = maxDrawdown
+		}
+
+		result.EquityCurve = append(result.EquityCurve, equity)
+		result.DailyReturns = append(result.DailyReturns, tradeReturn)
+	}
+
+	result.Trades = trades
+	result.PositiveTrades = positiveTrades
+	result.NegativeTrades = negativeTrades
+	if trades > 0 {
+		result.WinRate = float64(positiveTrades) / float64(trades) * 100
+	}
+	result.TotalReturn = equity - 1
+	if len(result.DailyReturns) > 0 {
+		periods := float64(len(result.DailyReturns))
+		result.AnnualizedReturn = math.Pow(1+result.TotalReturn, 252.0/periods) - 1
+	}
+
+	return result
 }
 
 // CalculateTechnicalIndicators calculates all technical indicators
