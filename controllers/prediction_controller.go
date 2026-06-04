@@ -135,3 +135,46 @@ func (c *PredictionController) GeneratePrediction(w http.ResponseWriter, r *http
 
 	writeJSONResponse(w, http.StatusCreated, SuccessResponse{Data: prediction})
 }
+
+func (c *PredictionController) BacktestStrategy(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	stockIDStr := vars["stockID"]
+
+	stockID, err := strconv.Atoi(stockIDStr)
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidStockIDFormat, err)
+		return
+	}
+
+	if stockID <= 0 {
+		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgStockIDMustBePositive, nil)
+		return
+	}
+
+	algorithm := r.URL.Query().Get("algorithm")
+	if algorithm == "" {
+		algorithm = "ENSEMBLE"
+	}
+
+	days := 30
+	daysStr := r.URL.Query().Get("days")
+	if daysStr != "" {
+		days, err = strconv.Atoi(daysStr)
+		if err != nil || days <= 0 {
+			writeErrorResponse(w, http.StatusBadRequest, "Invalid days parameter", err)
+			return
+		}
+	}
+
+	result, err := c.service.BacktestHistoricalStrategy(stockID, days, algorithm)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgStockNotFound, nil)
+			return
+		}
+		writeErrorResponse(w, http.StatusInternalServerError, "Failed to backtest strategy", err)
+		return
+	}
+
+	writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: result})
+}
