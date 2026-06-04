@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/db"
@@ -121,6 +122,46 @@ func (s *PredictionService) GetPredictionMetrics(predictionID int) (*db.Predicti
 }
 
 // GetAlgorithmPerformance retrieves performance stats for an algorithm
+func (s *PredictionService) BacktestHistoricalStrategy(stockID int, days int, algorithmType string) (*algorithms.BacktestResult, error) {
+	if s.priceHistoryRepo == nil {
+		return nil, fmt.Errorf("price history repository not initialized")
+	}
+	if days <= 0 {
+		days = s.lookbackPeriod
+	}
+
+	prices, err := s.priceHistoryRepo.GetHistoricalPrices(stockID, days+1)
+	if err != nil {
+		return nil, err
+	}
+	if len(prices) < 2 {
+		return nil, fmt.Errorf("insufficient price history for backtest")
+	}
+
+	priceValues := make([]float64, len(prices))
+	for i, p := range prices {
+		priceValues[i] = p.Price
+	}
+
+	var algorithm func([]float64) *algorithms.PredictionResult
+	switch strings.ToUpper(algorithmType) {
+	case "SMA":
+		algorithm = algorithms.SimpleMovingAveragePrediction
+	case "EMA":
+		algorithm = algorithms.ExponentialMovingAveragePrediction
+	case "MOMENTUM":
+		algorithm = algorithms.MomentumPrediction
+	case "MEAN_REVERSION":
+		algorithm = algorithms.MeanReversionPrediction
+	case "ENSEMBLE":
+		algorithm = algorithms.EnsemblePrediction
+	default:
+		return nil, fmt.Errorf("unsupported algorithm type: %s", algorithmType)
+	}
+
+	return algorithms.BacktestStrategy(priceValues, algorithm), nil
+}
+
 func (s *PredictionService) GetAlgorithmPerformance(algorithm string) (*db.AlgorithmPerformance, error) {
 	if s.metricsRepo == nil {
 		return nil, fmt.Errorf("metrics repository not initialized")
