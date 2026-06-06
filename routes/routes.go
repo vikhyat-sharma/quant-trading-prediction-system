@@ -17,6 +17,7 @@ func SetupRoutes(
 	sentimentController *controllers.SentimentController,
 	watchlistController *controllers.WatchlistController,
 	userAlertRuleController *controllers.UserAlertRuleController,
+	taxLotController *controllers.TaxLotController,
 ) *mux.Router {
 	r := mux.NewRouter()
 
@@ -35,6 +36,7 @@ func SetupRoutes(
 	// Prediction routes
 	r.HandleFunc(constants.RouteStockPredictions, predictionController.GetPredictions).Methods(constants.MethodGET)
 	r.HandleFunc(constants.RouteStockPredictionsGenerate, predictionController.GeneratePrediction).Methods(constants.MethodPOST)
+	r.HandleFunc(constants.RouteStockBacktest, predictionController.BacktestStrategy).Methods(constants.MethodGET)
 	r.HandleFunc(constants.RouteStockSentiment, sentimentController.AnalyzeSentiment).Methods(constants.MethodPOST)
 
 	// Price History routes
@@ -81,6 +83,16 @@ func SetupRoutes(
 	r.HandleFunc(constants.RouteUserAlertRules, userAlertRuleController.GetAlertRules).Methods(constants.MethodGET)
 	r.HandleFunc(constants.RouteUserAlertRules, userAlertRuleController.CreateAlertRule).Methods(constants.MethodPOST)
 	r.HandleFunc(constants.RouteUserAlertRuleByID, userAlertRuleController.DeleteAlertRule).Methods(constants.MethodDELETE)
+
+	// Tax Lot routes
+	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/buy", taxLotController.RecordBuy).Methods(constants.MethodPOST)
+	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/sell-fifo", taxLotController.RecordSellFIFO).Methods(constants.MethodPOST)
+	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/sell-lifo", taxLotController.RecordSellLIFO).Methods(constants.MethodPOST)
+	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/{taxLotID}/sell", taxLotController.RecordSellSpecificLot).Methods(constants.MethodPOST)
+	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/{taxLotID}/gains", taxLotController.GetTaxLotGains).Methods(constants.MethodGET)
+	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-gains", taxLotController.GetPortfolioTaxGains).Methods(constants.MethodGET)
+	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-report", taxLotController.GetTaxableGains).Methods(constants.MethodGET)
+	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-transactions", taxLotController.GetTaxTransactions).Methods(constants.MethodGET)
 
 	return r
 }
