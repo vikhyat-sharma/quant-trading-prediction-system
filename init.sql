@@ -171,3 +171,43 @@ CREATE INDEX IF NOT EXISTS idx_prediction_metrics_algorithm ON prediction_metric
 CREATE INDEX IF NOT EXISTS idx_prediction_metrics_prediction_id ON prediction_metrics(prediction_id);
 CREATE INDEX IF NOT EXISTS idx_portfolio_performance_portfolio_id ON portfolio_performance(portfolio_id);
 CREATE INDEX IF NOT EXISTS idx_portfolio_performance_record_date ON portfolio_performance(record_date);
+
+-- Create tax lots table for tax tracking
+CREATE TABLE IF NOT EXISTS tax_lots (
+    id SERIAL PRIMARY KEY,
+    portfolio_id INTEGER NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
+    stock_id INTEGER NOT NULL REFERENCES stocks(id) ON DELETE CASCADE,
+    quantity DECIMAL(18,4) NOT NULL,
+    cost_per_share DECIMAL(12,2) NOT NULL,
+    total_cost DECIMAL(15,2) NOT NULL,
+    acquisition_date TIMESTAMP NOT NULL,
+    quantity_sold DECIMAL(18,4) NOT NULL DEFAULT 0,
+    is_complete BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create tax transactions table for tracking buy/sell transactions
+CREATE TABLE IF NOT EXISTS tax_transactions (
+    id SERIAL PRIMARY KEY,
+    tax_lot_id INTEGER REFERENCES tax_lots(id) ON DELETE SET NULL,
+    portfolio_id INTEGER NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
+    stock_id INTEGER NOT NULL REFERENCES stocks(id) ON DELETE CASCADE,
+    type VARCHAR(10) NOT NULL, -- BUY or SELL
+    quantity DECIMAL(18,4) NOT NULL,
+    price DECIMAL(12,2) NOT NULL,
+    total_amount DECIMAL(15,2) NOT NULL,
+    fees DECIMAL(12,2) DEFAULT 0,
+    transaction_date TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for tax tables
+CREATE INDEX IF NOT EXISTS idx_tax_lots_portfolio_id ON tax_lots(portfolio_id);
+CREATE INDEX IF NOT EXISTS idx_tax_lots_stock_id ON tax_lots(stock_id);
+CREATE INDEX IF NOT EXISTS idx_tax_lots_acquisition_date ON tax_lots(acquisition_date);
+CREATE INDEX IF NOT EXISTS idx_tax_transactions_portfolio_id ON tax_transactions(portfolio_id);
+CREATE INDEX IF NOT EXISTS idx_tax_transactions_stock_id ON tax_transactions(stock_id);
+CREATE INDEX IF NOT EXISTS idx_tax_transactions_tax_lot_id ON tax_transactions(tax_lot_id);
+CREATE INDEX IF NOT EXISTS idx_tax_transactions_type ON tax_transactions(type);
+CREATE INDEX IF NOT EXISTS idx_tax_transactions_transaction_date ON tax_transactions(transaction_date);
