@@ -41,6 +41,7 @@ func main() {
 	notificationRepo := repositories.NewNotificationRepository(database)
 	userRepo := repositories.NewUserRepository(database)
 	portfolioRepo := repositories.NewPortfolioRepository(database)
+	taxLotRepo := repositories.NewTaxLotRepository(database)
 
 	stockService := services.NewStockService(stockRepo)
 	predictionService := services.NewPredictionService(predictionRepo, priceHistoryRepo)
@@ -49,6 +50,7 @@ func main() {
 	userService := services.NewUserService(userRepo)
 	portfolioService := services.NewPortfolioService(portfolioRepo)
 	sentimentService := services.NewSentimentService()
+	taxLotService := services.NewTaxLotService(taxLotRepo, priceHistoryRepo, stockRepo)
 
 	// Watchlist and alert rule setup
 	watchlistRepo := repositories.NewWatchlistRepository(database)
@@ -66,6 +68,7 @@ func main() {
 	userController := controllers.NewUserController(userService)
 	portfolioController := controllers.NewPortfolioController(portfolioService)
 	sentimentController := controllers.NewSentimentController(sentimentService)
+	taxLotController := controllers.NewTaxLotController(taxLotService)
 
 	router := routes.SetupRoutes(
 		stockController,
@@ -77,6 +80,7 @@ func main() {
 		sentimentController,
 		watchlistController,
 		userAlertRuleController,
+		taxLotController,
 	)
 
 	server := &http.Server{
