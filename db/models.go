@@ -198,3 +198,84 @@ func (n *Notification) Validate() error {
 	}
 	return nil
 }
+
+// TaxLot represents a single purchase lot of a stock for tax tracking
+type TaxLot struct {
+	ID              int       `json:"id" db:"id"`
+	PortfolioID     int       `json:"portfolio_id" db:"portfolio_id"`
+	StockID         int       `json:"stock_id" db:"stock_id"`
+	Quantity        float64   `json:"quantity" db:"quantity"`
+	CostPerShare    float64   `json:"cost_per_share" db:"cost_per_share"`
+	TotalCost       float64   `json:"total_cost" db:"total_cost"`
+	AcquisitionDate time.Time `json:"acquisition_date" db:"acquisition_date"`
+	QuantitySold    float64   `json:"quantity_sold" db:"quantity_sold"`
+	IsComplete      bool      `json:"is_complete" db:"is_complete"`
+	CreatedAt       time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
+}
+
+// TaxTransaction represents a buy/sell transaction for tax tracking
+type TaxTransaction struct {
+	ID              int       `json:"id" db:"id"`
+	TaxLotID        int       `json:"tax_lot_id" db:"tax_lot_id"`
+	PortfolioID     int       `json:"portfolio_id" db:"portfolio_id"`
+	StockID         int       `json:"stock_id" db:"stock_id"`
+	Type            string    `json:"type" db:"type"` // BUY or SELL
+	Quantity        float64   `json:"quantity" db:"quantity"`
+	Price           float64   `json:"price" db:"price"`
+	TotalAmount     float64   `json:"total_amount" db:"total_amount"`
+	Fees            float64   `json:"fees" db:"fees"`
+	TransactionDate time.Time `json:"transaction_date" db:"transaction_date"`
+	CreatedAt       time.Time `json:"created_at" db:"created_at"`
+}
+
+// TaxLotGains represents realized and unrealized gains for a tax lot
+type TaxLotGains struct {
+	TaxLotID        int       `json:"tax_lot_id"`
+	StockID         int       `json:"stock_id"`
+	Symbol          string    `json:"symbol"`
+	AcquisitionDate time.Time `json:"acquisition_date"`
+	QuantityHeld    float64   `json:"quantity_held"`
+	QuantitySold    float64   `json:"quantity_sold"`
+	CostPerShare    float64   `json:"cost_per_share"`
+	CurrentPrice    float64   `json:"current_price"`
+	CostBasis       float64   `json:"cost_basis"`
+	CurrentValue    float64   `json:"current_value"`
+	RealizedGain    float64   `json:"realized_gain"`
+	UnrealizedGain  float64   `json:"unrealized_gain"`
+	TotalGain       float64   `json:"total_gain"`
+	HoldingPeriod   string    `json:"holding_period"` // SHORT_TERM or LONG_TERM
+	IsLongTerm      bool      `json:"is_long_term"`
+}
+
+// Validate checks if the tax lot data is valid
+func (tl *TaxLot) Validate() error {
+	if tl.PortfolioID <= 0 || tl.StockID <= 0 {
+		return ErrInvalidStockID
+	}
+	if tl.Quantity <= 0 {
+		return errors.New("invalid tax lot quantity")
+	}
+	if tl.CostPerShare < 0 {
+		return errors.New("invalid cost per share")
+	}
+	return nil
+}
+
+// Validate checks if the tax transaction data is valid
+func (tt *TaxTransaction) Validate() error {
+	if tt.PortfolioID <= 0 || tt.StockID <= 0 {
+		return ErrInvalidStockID
+	}
+	if tt.Quantity <= 0 {
+		return errors.New("invalid transaction quantity")
+	}
+	if tt.Price < 0 || tt.Fees < 0 {
+		return errors.New("invalid transaction price or fees")
+	}
+	tt.TotalAmount = tt.Quantity * tt.Price
+	if tt.Type == "" {
+		tt.Type = "BUY"
+	}
+	return nil
+}
