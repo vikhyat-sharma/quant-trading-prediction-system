@@ -6,26 +6,50 @@ import (
 	"time"
 
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/db"
-	"github.com/vikhyat-sharma/quant-trading-prediction-system/repositories"
 )
+
+// TaxLotRepository defines the methods required by the tax lot service.
+type TaxLotRepository interface {
+	CreateTaxLot(*db.TaxLot) error
+	GetTaxLotByID(int) (*db.TaxLot, error)
+	GetTaxLotsByPortfolioID(int) ([]db.TaxLot, error)
+	GetActiveTaxLotsByStockID(int, int) ([]db.TaxLot, error)
+	UpdateTaxLot(*db.TaxLot) error
+	CreateTaxTransaction(*db.TaxTransaction) error
+	GetTaxTransactionsByPortfolioID(int) ([]db.TaxTransaction, error)
+}
+
+// StockRepository defines the methods required by the tax lot service.
+type StockRepository interface {
+	GetStock(int) (*db.Stock, error)
+}
+
+// TaxLotServiceInterface defines the public methods used by controllers and tests.
+type TaxLotServiceInterface interface {
+	RecordBuy(portfolioID, stockID int, quantity, price, fees float64, buyDate time.Time) (*db.TaxLot, error)
+	RecordSellFIFO(portfolioID, stockID int, quantity, price, fees float64, sellDate time.Time) (float64, error)
+	RecordSellLIFO(portfolioID, stockID int, quantity, price, fees float64, sellDate time.Time) (float64, error)
+	RecordSellSpecificLot(taxLotID int, quantity, price, fees float64, sellDate time.Time) (float64, error)
+	GetTaxLotGains(taxLotID int, currentPrice float64) (*db.TaxLotGains, error)
+	GetPortfolioTaxGains(portfolioID int, currentPrices map[int]float64) (map[string]interface{}, error)
+	CalculateTaxableGainsBySellDate(portfolioID int) (map[string]interface{}, error)
+	GetTaxTransactionsByPortfolio(portfolioID int) ([]db.TaxTransaction, error)
+}
 
 // TaxLotService handles tax lot and gains calculations
 type TaxLotService struct {
-	taxLotRepo       *repositories.TaxLotRepository
-	priceHistoryRepo *repositories.PriceHistoryRepository
-	stockRepo        *repositories.StockRepository
+	taxLotRepo TaxLotRepository
+	stockRepo  StockRepository
 }
 
 // NewTaxLotService creates a new tax lot service
 func NewTaxLotService(
-	taxLotRepo *repositories.TaxLotRepository,
-	priceHistoryRepo *repositories.PriceHistoryRepository,
-	stockRepo *repositories.StockRepository,
+	taxLotRepo TaxLotRepository,
+	stockRepo StockRepository,
 ) *TaxLotService {
 	return &TaxLotService{
-		taxLotRepo:       taxLotRepo,
-		priceHistoryRepo: priceHistoryRepo,
-		stockRepo:        stockRepo,
+		taxLotRepo: taxLotRepo,
+		stockRepo:  stockRepo,
 	}
 }
 
@@ -227,7 +251,7 @@ func (s *TaxLotService) GetTaxLotGains(taxLotID int, currentPrice float64) (*db.
 		return nil, errors.New("tax lot not found")
 	}
 
-	stock, err := s.stockRepo.GetStockByID(taxLot.StockID)
+	stock, err := s.stockRepo.GetStock(taxLot.StockID)
 	if err != nil {
 		return nil, err
 	}
