@@ -12,11 +12,11 @@ import (
 
 // TaxLotController handles tax lot operations
 type TaxLotController struct {
-	taxLotService *services.TaxLotService
+	taxLotService services.TaxLotServiceInterface
 }
 
 // NewTaxLotController creates a new tax lot controller
-func NewTaxLotController(taxLotService *services.TaxLotService) *TaxLotController {
+func NewTaxLotController(taxLotService services.TaxLotServiceInterface) *TaxLotController {
 	return &TaxLotController{
 		taxLotService: taxLotService,
 	}
@@ -236,7 +236,6 @@ func (c *TaxLotController) GetPortfolioTaxGains(w http.ResponseWriter, r *http.R
 	// Parse current prices from query parameters
 	// Format: ?prices=1:100,2:150,3:200 (stockID:price pairs)
 	pricesQuery := r.URL.Query().Get("prices")
-	currentPrices := make(map[int]float64)
 
 	if pricesQuery != "" {
 		// Parse the prices query parameter
