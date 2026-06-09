@@ -50,7 +50,7 @@ func main() {
 	userService := services.NewUserService(userRepo)
 	portfolioService := services.NewPortfolioService(portfolioRepo)
 	sentimentService := services.NewSentimentService()
-	taxLotService := services.NewTaxLotService(taxLotRepo, priceHistoryRepo, stockRepo)
+	taxLotService := services.NewTaxLotService(taxLotRepo, stockRepo)
 
 	// Watchlist and alert rule setup
 	watchlistRepo := repositories.NewWatchlistRepository(database)
