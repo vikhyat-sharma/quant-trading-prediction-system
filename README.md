@@ -12,12 +12,22 @@ This project provides a RESTful API for managing stocks and generating trading p
 
 ## ✨ Key Features
 
-* Clean Architecture (Controller → Service → Repository)
-* RESTful API design
-* PostgreSQL integration with auto-migrations
-* Docker & Docker Compose support
-* Environment-based configuration
-* Testable and modular codebase
+* **Advanced Prediction Algorithms** - SMA, EMA, Momentum, Mean Reversion, Ensemble
+* **Technical Indicators** - SMA, EMA, RSI, MACD, Bollinger Bands
+* **Sentiment Analysis** - Text-based signal extraction
+* **Portfolio Analytics** - Value, volatility, Sharpe ratio, diversification metrics
+* **Prediction Metrics** - Accuracy tracking with confidence scores
+* **Tax Lot Tracking** - FIFO/LIFO/Specific lot methods, realized/unrealized gains ✨ NEW
+* **User Watchlists** - Custom stock tracking per user
+* **Alert Rules** - User-defined price and prediction alerts
+* **Enterprise Authentication** - JWT tokens, bcrypt hashing, role-based access control
+* **Security Middleware** - Rate limiting, request tracking, panic recovery
+* **Clean Architecture** (Controller → Service → Repository)
+* **RESTful API** design with 20+ endpoints
+* **PostgreSQL** integration with auto-migrations
+* **Docker & Docker Compose** support
+* **Environment-based configuration**
+* **Testable and modular** codebase
 
 ---
 
