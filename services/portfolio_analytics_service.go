@@ -2,15 +2,135 @@ package services
 
 import (
 	"math"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/db"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/repositories"
+	"github.com/vikhyat-sharma/quant-trading-prediction-system/services/algorithms"
 )
 
 type PortfolioAnalyticsService struct {
 	portfolioRepo    *repositories.PortfolioRepository
 	priceHistoryRepo *repositories.PriceHistoryRepository
+}
+
+// CalculateValueAtRisk calculates the historical Value at Risk (VaR) for a portfolio
+// confidence should be in (0,1), e.g., 0.95 for 95% VaR
+func (s *PortfolioAnalyticsService) CalculateValueAtRisk(portfolioID int, days int, confidence float64) (float64, error) {
+	if confidence <= 0 || confidence >= 1 {
+		return 0, nil
+	}
+
+	holdings, err := s.portfolioRepo.GetPortfolioHoldings(portfolioID)
+	if err != nil {
+		return 0, err
+	}
+	if len(holdings) == 0 {
+		return 0, nil
+	}
+
+	returns := make([]float64, 0)
+	for i := 0; i < days; i++ {
+		endDate := time.Now().AddDate(0, 0, -i)
+		startDate := endDate.AddDate(0, 0, -1)
+		dayValue := 0.0
+		prevDayValue := 0.0
+		for _, holding := range holdings {
+			priceHist, _ := s.priceHistoryRepo.GetPriceHistoryByStockIDAndDateRange(
+				holding.StockID, startDate, endDate,
+			)
+			if len(priceHist) > 0 {
+				currentPrice := priceHist[len(priceHist)-1].Price
+				dayValue += currentPrice * holding.Quantity
+				if len(priceHist) > 1 {
+					prevPrice := priceHist[0].Price
+					prevDayValue += prevPrice * holding.Quantity
+				}
+			}
+		}
+		if prevDayValue > 0 && dayValue > 0 {
+			dailyReturn := (dayValue - prevDayValue) / prevDayValue
+			returns = append(returns, dailyReturn)
+		}
+	}
+	if len(returns) == 0 {
+		return 0, nil
+	}
+	// Sort returns ascending (worst loss first)
+	sorted := make([]float64, len(returns))
+	copy(sorted, returns)
+	sort.Float64s(sorted)
+	// VaR is the quantile at (1-confidence)
+	idx := int((1.0-confidence)*float64(len(sorted)))
+	if idx < 0 {
+		idx = 0
+	}
+	if idx >= len(sorted) {
+		idx = len(sorted)-1
+	}
+	varValue := -sorted[idx] // VaR is reported as a positive loss
+	return varValue, nil
+}
+
+// CalculateExpectedShortfall calculates the Expected Shortfall (CVaR) for a portfolio
+// confidence should be in (0,1), e.g., 0.95 for 95% ES
+func (s *PortfolioAnalyticsService) CalculateExpectedShortfall(portfolioID int, days int, confidence float64) (float64, error) {
+	if confidence <= 0 || confidence >= 1 {
+		return 0, nil
+	}
+	holdings, err := s.portfolioRepo.GetPortfolioHoldings(portfolioID)
+	if err != nil {
+		return 0, err
+	}
+	if len(holdings) == 0 {
+		return 0, nil
+	}
+	returns := make([]float64, 0)
+	for i := 0; i < days; i++ {
+		endDate := time.Now().AddDate(0, 0, -i)
+		startDate := endDate.AddDate(0, 0, -1)
+		dayValue := 0.0
+		prevDayValue := 0.0
+		for _, holding := range holdings {
+			priceHist, _ := s.priceHistoryRepo.GetPriceHistoryByStockIDAndDateRange(
+				holding.StockID, startDate, endDate,
+			)
+			if len(priceHist) > 0 {
+				currentPrice := priceHist[len(priceHist)-1].Price
+				dayValue += currentPrice * holding.Quantity
+				if len(priceHist) > 1 {
+					prevPrice := priceHist[0].Price
+					prevDayValue += prevPrice * holding.Quantity
+				}
+			}
+		}
+		if prevDayValue > 0 && dayValue > 0 {
+			dailyReturn := (dayValue - prevDayValue) / prevDayValue
+			returns = append(returns, dailyReturn)
+		}
+	}
+	if len(returns) == 0 {
+		return 0, nil
+	}
+	sorted := make([]float64, len(returns))
+	copy(sorted, returns)
+	sort.Float64s(sorted)
+	idx := int((1.0-confidence)*float64(len(sorted)))
+	if idx < 1 {
+		idx = 1
+	}
+	tail := sorted[:idx]
+	if len(tail) == 0 {
+		return 0, nil
+	}
+	sum := 0.0
+	for _, r := range tail {
+		sum += r
+	}
+	es := -sum / float64(len(tail)) // ES is positive loss
+	return es, nil
 }
 
 func NewPortfolioAnalyticsService(
@@ -39,6 +159,37 @@ func (s *PortfolioAnalyticsService) CalculatePortfolioValue(portfolioID int) (fl
 	}
 
 	return totalValue, nil
+}
+
+// BacktestHistoricalStrategy simulates a strategy on historical stock prices.
+func (s *PortfolioAnalyticsService) BacktestHistoricalStrategy(stockID int, days int, algorithmName string) (*algorithms.BacktestResult, error) {
+	pricesHistory, err := s.priceHistoryRepo.GetHistoricalPrices(stockID, days+1)
+	if err != nil {
+		return nil, err
+	}
+
+	prices := make([]float64, len(pricesHistory))
+	for i, price := range pricesHistory {
+		prices[i] = price.Price
+	}
+
+	var algFunc func([]float64) *algorithms.PredictionResult
+	switch strings.ToUpper(algorithmName) {
+	case "SMA":
+		algFunc = algorithms.SimpleMovingAveragePrediction
+	case "EMA":
+		algFunc = algorithms.ExponentialMovingAveragePrediction
+	case "MOMENTUM":
+		algFunc = algorithms.MomentumPrediction
+	case "MEAN_REVERSION":
+		algFunc = algorithms.MeanReversionPrediction
+	case "ENSEMBLE":
+		algFunc = algorithms.EnsemblePrediction
+	default:
+		return nil, nil
+	}
+
+	return algorithms.BacktestStrategy(prices, algFunc), nil
 }
 
 // CalculatePortfolioMetrics calculates gains/losses and returns for a portfolio
