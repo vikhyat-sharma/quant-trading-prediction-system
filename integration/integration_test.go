@@ -119,6 +119,8 @@ func buildRouter(database *sql.DB) http.Handler {
 	userService := services.NewUserService(userRepo)
 	portfolioService := services.NewPortfolioService(portfolioRepo)
 	sentimentService := services.NewSentimentService()
+	taxLotRepo := repositories.NewTaxLotRepository(database)
+	taxLotService := services.NewTaxLotService(taxLotRepo, stockRepo)
 
 	watchlistRepo := repositories.NewWatchlistRepository(database)
 	watchlistService := services.NewWatchlistService(watchlistRepo)
@@ -135,6 +137,7 @@ func buildRouter(database *sql.DB) http.Handler {
 	userController := controllers.NewUserController(userService)
 	portfolioController := controllers.NewPortfolioController(portfolioService)
 	sentimentController := controllers.NewSentimentController(sentimentService)
+	taxLotController := controllers.NewTaxLotController(taxLotService)
 
 	return routes.SetupRoutes(
 		stockController,
@@ -146,6 +149,7 @@ func buildRouter(database *sql.DB) http.Handler {
 		sentimentController,
 		watchlistController,
 		userAlertRuleController,
+		taxLotController,
 	)
 }
 
