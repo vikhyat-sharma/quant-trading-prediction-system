@@ -145,6 +145,7 @@ const (
 	RouteUserByID                 = "/users/{id}"
 	RouteUserPortfolios           = "/users/{userID}/portfolios"
 	RouteUserPortfolioByID        = "/users/{userID}/portfolios/{portfolioID}"
+	RouteUserPortfolioValue       = "/users/{userID}/portfolios/{portfolioID}/value"
 	RouteUserPortfolioHoldings    = "/users/{userID}/portfolios/{portfolioID}/holdings"
 	RouteUserPortfolioHoldingByID = "/users/{userID}/portfolios/{portfolioID}/holdings/{holdingID}"
 	RouteUserWatchlists           = "/users/{userID}/watchlists"
