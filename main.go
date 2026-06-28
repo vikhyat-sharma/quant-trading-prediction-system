@@ -66,7 +66,7 @@ func main() {
 	priceHistoryController := controllers.NewPriceHistoryController(priceHistoryService)
 	alertController := controllers.NewAlertController(alertService)
 	userController := controllers.NewUserController(userService)
-	portfolioController := controllers.NewPortfolioController(portfolioService)
+	portfolioController := controllers.NewPortfolioController(portfolioService, priceHistoryRepo)
 	sentimentController := controllers.NewSentimentController(sentimentService)
 	taxLotController := controllers.NewTaxLotController(taxLotService)
 
