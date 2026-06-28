@@ -13,11 +13,12 @@ import (
 )
 
 type PortfolioController struct {
-	service *services.PortfolioService
+	service   *services.PortfolioService
+	priceRepo *repositories.PriceHistoryRepository
 }
 
-func NewPortfolioController(service *services.PortfolioService) *PortfolioController {
-	return &PortfolioController{service: service}
+func NewPortfolioController(service *services.PortfolioService, priceRepo *repositories.PriceHistoryRepository) *PortfolioController {
+	return &PortfolioController{service: service, priceRepo: priceRepo}
 }
 
 func (c *PortfolioController) GetPortfolios(w http.ResponseWriter, r *http.Request) {
@@ -450,4 +451,62 @@ func (c *PortfolioController) DeleteHolding(w http.ResponseWriter, r *http.Reque
 	}
 
 	writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: map[string]string{"message": "Holding deleted successfully"}})
+}
+
+// GetPortfolioValue returns current portfolio value and cost basis
+// GET /users/{userID}/portfolios/{portfolioID}/value
+func (c *PortfolioController) GetPortfolioValue(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userIDStr := vars["userID"]
+	portfolioIDStr := vars["portfolioID"]
+
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidUserIDFormat, err)
+		return
+	}
+	portfolioID, err := strconv.Atoi(portfolioIDStr)
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidPortfolioIDFormat, err)
+		return
+	}
+
+	if userID <= 0 || portfolioID <= 0 {
+		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgUserIDMustBePositive, nil)
+		return
+	}
+
+	// Verify portfolio exists
+	if _, err := c.service.GetPortfolioByID(userID, portfolioID); err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgPortfolioNotFound, nil)
+			return
+		}
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolio, err)
+		return
+	}
+
+	holdings, err := c.service.GetHoldings(portfolioID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: map[string]float64{"total_value": 0, "cost_basis": 0}})
+			return
+		}
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrieveHoldings, err)
+		return
+	}
+
+	totalValue := 0.0
+	totalCostBasis := 0.0
+	for _, h := range holdings {
+		latest, err := c.priceRepo.GetLatestPrice(h.StockID)
+		price := h.AvgCost
+		if err == nil && latest != nil {
+			price = latest.Price
+		}
+		totalValue += h.Quantity * price
+		totalCostBasis += h.Quantity * h.AvgCost
+	}
+
+	writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: map[string]float64{"total_value": totalValue, "cost_basis": totalCostBasis}})
 }
