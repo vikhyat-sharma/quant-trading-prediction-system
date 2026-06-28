@@ -70,6 +70,8 @@ func SetupRoutes(
 	r.HandleFunc(constants.RouteUserPortfolioHoldings, portfolioController.AddHolding).Methods(constants.MethodPOST)
 	r.HandleFunc(constants.RouteUserPortfolioHoldingByID, portfolioController.UpdateHolding).Methods(constants.MethodPUT)
 	r.HandleFunc(constants.RouteUserPortfolioHoldingByID, portfolioController.DeleteHolding).Methods(constants.MethodDELETE)
+	// Portfolio value
+	r.HandleFunc(constants.RouteUserPortfolioValue, portfolioController.GetPortfolioValue).Methods(constants.MethodGET)
 
 	// User Watchlist routes
 	r.HandleFunc(constants.RouteUserWatchlists, watchlistController.GetWatchlists).Methods(constants.MethodGET)
