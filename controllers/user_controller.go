@@ -10,6 +10,7 @@ import (
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/db"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/repositories"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/services"
+	"github.com/vikhyat-sharma/quant-trading-prediction-system/util"
 )
 
 type UserController struct {
@@ -79,8 +80,10 @@ func (c *UserController) GetUser(w http.ResponseWriter, r *http.Request) {
 
 func (c *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
-		Name  string `json:"name"`
-		Email string `json:"email"`
+		Name     string `json:"name"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Role     string `json:"role"`
 	}
 
 	if err := parseJSONBody(r, &payload); err != nil {
@@ -88,12 +91,18 @@ func (c *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if payload.Name == "" || payload.Email == "" {
-		writeErrorResponse(w, http.StatusBadRequest, "Name and email are required", nil)
+	if payload.Name == "" || payload.Email == "" || payload.Password == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "Name, email, and password are required", nil)
 		return
 	}
 
-	user := &db.User{Name: payload.Name, Email: payload.Email}
+	hashedPassword, err := util.HashPassword(payload.Password)
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "Invalid password", err)
+		return
+	}
+
+	user := &db.User{Name: payload.Name, Email: payload.Email, Password: hashedPassword, Role: payload.Role, IsActive: true}
 	createdUser, err := c.service.CreateUser(user)
 	if err != nil {
 		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToCreateUser, err)

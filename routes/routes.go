@@ -26,6 +26,15 @@ func SetupRoutes(
 	r.Use(middleware.CORSMiddleware)
 	r.Use(middleware.ContentTypeMiddleware)
 
+	protectedUserRoutes := r.PathPrefix("/users").Subrouter()
+	protectedUserRoutes.Use(middleware.AuthMiddleware)
+
+	protectedPortfolioRoutes := r.PathPrefix("/users/{userID}/portfolios").Subrouter()
+	protectedPortfolioRoutes.Use(middleware.AuthMiddleware)
+
+	protectedAlertRoutes := r.PathPrefix("/stocks/{stockID}/alerts").Subrouter()
+	protectedAlertRoutes.Use(middleware.AuthMiddleware)
+
 	// Stock routes
 	r.HandleFunc(constants.RouteStocks, stockController.GetAllStocks).Methods(constants.MethodGET)
 	r.HandleFunc(constants.RouteStocks, stockController.CreateStock).Methods(constants.MethodPOST)
@@ -47,54 +56,53 @@ func SetupRoutes(
 	r.HandleFunc(constants.RouteStockLatestPrice, priceHistoryController.GetLatestPrice).Methods(constants.MethodGET)
 
 	// Alert routes
-	r.HandleFunc(constants.RouteStockAlerts, alertController.GetAlerts).Methods(constants.MethodGET)
-	r.HandleFunc(constants.RouteStockAlerts, alertController.CreateAlert).Methods(constants.MethodPOST)
-	r.HandleFunc(constants.RouteStockAlertByID, alertController.DeleteAlert).Methods(constants.MethodDELETE)
-	r.HandleFunc(constants.RouteStockAlertsEvaluate, alertController.EvaluateAlerts).Methods(constants.MethodPOST)
-	r.HandleFunc(constants.RouteStockNotifications, alertController.GetNotifications).Methods(constants.MethodGET)
+	protectedAlertRoutes.HandleFunc(constants.RouteStockAlerts, alertController.GetAlerts).Methods(constants.MethodGET)
+	protectedAlertRoutes.HandleFunc(constants.RouteStockAlerts, alertController.CreateAlert).Methods(constants.MethodPOST)
+	protectedAlertRoutes.HandleFunc(constants.RouteStockAlertByID, alertController.DeleteAlert).Methods(constants.MethodDELETE)
+	protectedAlertRoutes.HandleFunc(constants.RouteStockAlertsEvaluate, alertController.EvaluateAlerts).Methods(constants.MethodPOST)
+	protectedAlertRoutes.HandleFunc(constants.RouteStockNotifications, alertController.GetNotifications).Methods(constants.MethodGET)
 
 	// User routes
-	r.HandleFunc(constants.RouteUsers, userController.GetUsers).Methods(constants.MethodGET)
 	r.HandleFunc(constants.RouteUsers, userController.CreateUser).Methods(constants.MethodPOST)
-	r.HandleFunc(constants.RouteUserByID, userController.GetUser).Methods(constants.MethodGET)
-	r.HandleFunc(constants.RouteUserByID, userController.UpdateUser).Methods(constants.MethodPUT)
-	r.HandleFunc(constants.RouteUserByID, userController.DeleteUser).Methods(constants.MethodDELETE)
+	protectedUserRoutes.HandleFunc(constants.RouteUsers, userController.GetUsers).Methods(constants.MethodGET)
+	protectedUserRoutes.HandleFunc(constants.RouteUserByID, userController.GetUser).Methods(constants.MethodGET)
+	protectedUserRoutes.HandleFunc(constants.RouteUserByID, userController.UpdateUser).Methods(constants.MethodPUT)
+	protectedUserRoutes.HandleFunc(constants.RouteUserByID, userController.DeleteUser).Methods(constants.MethodDELETE)
 
 	// Portfolio routes
-	r.HandleFunc(constants.RouteUserPortfolios, portfolioController.GetPortfolios).Methods(constants.MethodGET)
-	r.HandleFunc(constants.RouteUserPortfolios, portfolioController.CreatePortfolio).Methods(constants.MethodPOST)
-	r.HandleFunc(constants.RouteUserPortfolioByID, portfolioController.GetPortfolio).Methods(constants.MethodGET)
-	r.HandleFunc(constants.RouteUserPortfolioByID, portfolioController.UpdatePortfolio).Methods(constants.MethodPUT)
-	r.HandleFunc(constants.RouteUserPortfolioByID, portfolioController.DeletePortfolio).Methods(constants.MethodDELETE)
-	r.HandleFunc(constants.RouteUserPortfolioHoldings, portfolioController.GetHoldings).Methods(constants.MethodGET)
-	r.HandleFunc(constants.RouteUserPortfolioHoldings, portfolioController.AddHolding).Methods(constants.MethodPOST)
-	r.HandleFunc(constants.RouteUserPortfolioHoldingByID, portfolioController.UpdateHolding).Methods(constants.MethodPUT)
-	r.HandleFunc(constants.RouteUserPortfolioHoldingByID, portfolioController.DeleteHolding).Methods(constants.MethodDELETE)
-	// Portfolio value
-	r.HandleFunc(constants.RouteUserPortfolioValue, portfolioController.GetPortfolioValue).Methods(constants.MethodGET)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserPortfolios, portfolioController.GetPortfolios).Methods(constants.MethodGET)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserPortfolios, portfolioController.CreatePortfolio).Methods(constants.MethodPOST)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserPortfolioByID, portfolioController.GetPortfolio).Methods(constants.MethodGET)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserPortfolioByID, portfolioController.UpdatePortfolio).Methods(constants.MethodPUT)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserPortfolioByID, portfolioController.DeletePortfolio).Methods(constants.MethodDELETE)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserPortfolioHoldings, portfolioController.GetHoldings).Methods(constants.MethodGET)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserPortfolioHoldings, portfolioController.AddHolding).Methods(constants.MethodPOST)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserPortfolioHoldingByID, portfolioController.UpdateHolding).Methods(constants.MethodPUT)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserPortfolioHoldingByID, portfolioController.DeleteHolding).Methods(constants.MethodDELETE)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserPortfolioValue, portfolioController.GetPortfolioValue).Methods(constants.MethodGET)
 
 	// User Watchlist routes
-	r.HandleFunc(constants.RouteUserWatchlists, watchlistController.GetWatchlists).Methods(constants.MethodGET)
-	r.HandleFunc(constants.RouteUserWatchlists, watchlistController.CreateWatchlist).Methods(constants.MethodPOST)
-	r.HandleFunc(constants.RouteUserWatchlistByID, watchlistController.DeleteWatchlist).Methods(constants.MethodDELETE)
-	r.HandleFunc(constants.RouteUserWatchlistItems, watchlistController.GetItems).Methods(constants.MethodGET)
-	r.HandleFunc(constants.RouteUserWatchlistItems, watchlistController.AddStock).Methods(constants.MethodPOST)
-	r.HandleFunc(constants.RouteUserWatchlistItemByID, watchlistController.RemoveStock).Methods(constants.MethodDELETE)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserWatchlists, watchlistController.GetWatchlists).Methods(constants.MethodGET)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserWatchlists, watchlistController.CreateWatchlist).Methods(constants.MethodPOST)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserWatchlistByID, watchlistController.DeleteWatchlist).Methods(constants.MethodDELETE)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserWatchlistItems, watchlistController.GetItems).Methods(constants.MethodGET)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserWatchlistItems, watchlistController.AddStock).Methods(constants.MethodPOST)
+	protectedPortfolioRoutes.HandleFunc(constants.RouteUserWatchlistItemByID, watchlistController.RemoveStock).Methods(constants.MethodDELETE)
 
 	// User Alert Rule routes
-	r.HandleFunc(constants.RouteUserAlertRules, userAlertRuleController.GetAlertRules).Methods(constants.MethodGET)
-	r.HandleFunc(constants.RouteUserAlertRules, userAlertRuleController.CreateAlertRule).Methods(constants.MethodPOST)
-	r.HandleFunc(constants.RouteUserAlertRuleByID, userAlertRuleController.DeleteAlertRule).Methods(constants.MethodDELETE)
+	protectedUserRoutes.HandleFunc(constants.RouteUserAlertRules, userAlertRuleController.GetAlertRules).Methods(constants.MethodGET)
+	protectedUserRoutes.HandleFunc(constants.RouteUserAlertRules, userAlertRuleController.CreateAlertRule).Methods(constants.MethodPOST)
+	protectedUserRoutes.HandleFunc(constants.RouteUserAlertRuleByID, userAlertRuleController.DeleteAlertRule).Methods(constants.MethodDELETE)
 
 	// Tax Lot routes
-	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/buy", taxLotController.RecordBuy).Methods(constants.MethodPOST)
-	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/sell-fifo", taxLotController.RecordSellFIFO).Methods(constants.MethodPOST)
-	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/sell-lifo", taxLotController.RecordSellLIFO).Methods(constants.MethodPOST)
-	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/{taxLotID}/sell", taxLotController.RecordSellSpecificLot).Methods(constants.MethodPOST)
-	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/{taxLotID}/gains", taxLotController.GetTaxLotGains).Methods(constants.MethodGET)
-	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-gains", taxLotController.GetPortfolioTaxGains).Methods(constants.MethodGET)
-	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-report", taxLotController.GetTaxableGains).Methods(constants.MethodGET)
-	r.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-transactions", taxLotController.GetTaxTransactions).Methods(constants.MethodGET)
+	protectedPortfolioRoutes.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/buy", taxLotController.RecordBuy).Methods(constants.MethodPOST)
+	protectedPortfolioRoutes.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/sell-fifo", taxLotController.RecordSellFIFO).Methods(constants.MethodPOST)
+	protectedPortfolioRoutes.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/sell-lifo", taxLotController.RecordSellLIFO).Methods(constants.MethodPOST)
+	protectedPortfolioRoutes.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/{taxLotID}/sell", taxLotController.RecordSellSpecificLot).Methods(constants.MethodPOST)
+	protectedPortfolioRoutes.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-lots/{taxLotID}/gains", taxLotController.GetTaxLotGains).Methods(constants.MethodGET)
+	protectedPortfolioRoutes.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-gains", taxLotController.GetPortfolioTaxGains).Methods(constants.MethodGET)
+	protectedPortfolioRoutes.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-report", taxLotController.GetTaxableGains).Methods(constants.MethodGET)
+	protectedPortfolioRoutes.HandleFunc("/users/{userID}/portfolios/{portfolioID}/tax-transactions", taxLotController.GetTaxTransactions).Methods(constants.MethodGET)
 
 	return r
 }

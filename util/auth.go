@@ -4,7 +4,9 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -12,9 +14,18 @@ import (
 )
 
 const (
-	JWTSecretKey = "QUANT_TRADING_SECRET_KEY"
-	TokenExpiry  = time.Hour * 24 * 7 // 7 days
+	JWTSecretEnvKey = "JWT_SECRET"
+	JWTSecretKey    = "QUANT_TRADING_SECRET_KEY"
+	TokenExpiry     = time.Hour * 24 * 7 // 7 days
 )
+
+// GetJWTSecret returns the configured JWT secret from the environment.
+func GetJWTSecret() string {
+	if secret := strings.TrimSpace(os.Getenv(JWTSecretEnvKey)); secret != "" {
+		return secret
+	}
+	return JWTSecretKey
+}
 
 // Claims represents JWT claims
 type Claims struct {
@@ -57,7 +68,7 @@ func GenerateJWT(userID int, email, role string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(JWTSecretKey))
+	return token.SignedString([]byte(GetJWTSecret()))
 }
 
 // VerifyJWT verifies and parses a JWT token
@@ -67,7 +78,7 @@ func VerifyJWT(tokenString string) (*Claims, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
-		return []byte(JWTSecretKey), nil
+		return []byte(GetJWTSecret()), nil
 	})
 
 	if err != nil {

@@ -3,7 +3,9 @@ package middleware
 import (
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/util"
@@ -32,7 +34,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Store claims in context for later use
-		r.Header.Set("X-User-ID", string(rune(claims.UserID)))
+		r.Header.Set("X-User-ID", strconv.Itoa(claims.UserID))
 		r.Header.Set("X-User-Email", claims.Email)
 		r.Header.Set("X-User-Role", claims.Role)
 
@@ -50,7 +52,7 @@ func OptionalAuthMiddleware(next http.Handler) http.Handler {
 				token := parts[1]
 				claims, err := util.VerifyJWT(token)
 				if err == nil {
-					r.Header.Set("X-User-ID", string(rune(claims.UserID)))
+					r.Header.Set("X-User-ID", strconv.Itoa(claims.UserID))
 					r.Header.Set("X-User-Email", claims.Email)
 					r.Header.Set("X-User-Role", claims.Role)
 				}
@@ -76,6 +78,7 @@ func AdminMiddleware(next http.Handler) http.Handler {
 
 // RateLimitMiddleware implements basic rate limiting
 type RateLimiter struct {
+	mu            sync.RWMutex
 	requestCounts map[string][]time.Time
 	maxRequests   int
 	window        time.Duration
@@ -94,6 +97,7 @@ func NewRateLimiter(maxRequests int, window time.Duration) *RateLimiter {
 		defer ticker.Stop()
 		for range ticker.C {
 			now := time.Now()
+			rl.mu.Lock()
 			for ip := range rl.requestCounts {
 				var filtered []time.Time
 				for _, t := range rl.requestCounts[ip] {
@@ -107,6 +111,7 @@ func NewRateLimiter(maxRequests int, window time.Duration) *RateLimiter {
 					rl.requestCounts[ip] = filtered
 				}
 			}
+			rl.mu.Unlock()
 		}
 	}()
 
@@ -117,6 +122,9 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := r.RemoteAddr
 		now := time.Now()
+
+		rl.mu.Lock()
+		defer rl.mu.Unlock()
 
 		// Clean old requests
 		var filtered []time.Time

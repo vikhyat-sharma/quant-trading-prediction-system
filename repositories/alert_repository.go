@@ -17,7 +17,7 @@ func NewAlertRepository(database *sql.DB) *AlertRepository {
 func (r *AlertRepository) CreateAlert(alert *db.Alert) (*db.Alert, error) {
 	var id int
 	err := r.db.QueryRow(
-		"INSERT INTO price_alerts (stock_id, threshold, condition, enabled) VALUES ($1, $2, $3, $4) RETURNING id",
+		"INSERT INTO alerts (stock_id, threshold, condition, enabled) VALUES ($1, $2, $3, $4) RETURNING id",
 		alert.StockID, alert.Threshold, alert.Condition, alert.Enabled,
 	).Scan(&id)
 	if err != nil {
@@ -29,7 +29,7 @@ func (r *AlertRepository) CreateAlert(alert *db.Alert) (*db.Alert, error) {
 
 func (r *AlertRepository) GetAlertsByStockID(stockID int) ([]*db.Alert, error) {
 	rows, err := r.db.Query(
-		"SELECT id, stock_id, threshold, condition, enabled, created_at FROM price_alerts WHERE stock_id = $1 ORDER BY created_at DESC",
+		"SELECT id, stock_id, threshold, condition, enabled, created_at FROM alerts WHERE stock_id = $1 ORDER BY created_at DESC",
 		stockID,
 	)
 	if err != nil {
@@ -52,7 +52,7 @@ func (r *AlertRepository) GetAlertsByStockID(stockID int) ([]*db.Alert, error) {
 
 func (r *AlertRepository) GetEnabledAlertsByStockID(stockID int) ([]*db.Alert, error) {
 	rows, err := r.db.Query(
-		"SELECT id, stock_id, threshold, condition, enabled, created_at FROM price_alerts WHERE stock_id = $1 AND enabled = TRUE ORDER BY created_at DESC",
+		"SELECT id, stock_id, threshold, condition, enabled, created_at FROM alerts WHERE stock_id = $1 AND enabled = TRUE ORDER BY created_at DESC",
 		stockID,
 	)
 	if err != nil {
@@ -75,7 +75,7 @@ func (r *AlertRepository) GetEnabledAlertsByStockID(stockID int) ([]*db.Alert, e
 
 func (r *AlertRepository) DeleteAlert(stockID int, alertID int) error {
 	result, err := r.db.Exec(
-		"DELETE FROM price_alerts WHERE id = $1 AND stock_id = $2",
+		"DELETE FROM alerts WHERE id = $1 AND stock_id = $2",
 		alertID, stockID,
 	)
 	if err != nil {

@@ -87,8 +87,8 @@ func (r *UserRepository) GetUserByID(id int) (*db.User, error) {
 func (r *UserRepository) CreateUser(user *db.User) (*db.User, error) {
 	var id int
 	if err := r.db.QueryRow(
-		"INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, created_at",
-		user.Name, user.Email,
+		"INSERT INTO users (name, email, password, role, is_active) VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at",
+		user.Name, user.Email, user.Password, user.Role, user.IsActive,
 	).Scan(&id, &user.CreatedAt); err != nil {
 		return nil, err
 	}
