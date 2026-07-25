@@ -41,7 +41,11 @@ Thumbs.db
 
 # Build artifacts
 bin/
+app
 dist/
+coverage/
+*.out
+*.coverprofile
 
 # Database files
 *.db
