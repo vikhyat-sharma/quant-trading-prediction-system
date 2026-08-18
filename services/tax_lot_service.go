@@ -17,6 +17,7 @@ type TaxLotRepository interface {
 	UpdateTaxLot(*db.TaxLot) error
 	CreateTaxTransaction(*db.TaxTransaction) error
 	GetTaxTransactionsByPortfolioID(int) ([]db.TaxTransaction, error)
+	GetTaxTransactionsByTaxLotID(int) ([]db.TaxTransaction, error)
 }
 
 // StockRepository defines the methods required by the tax lot service.
@@ -261,10 +262,32 @@ func (s *TaxLotService) GetTaxLotGains(taxLotID int, currentPrice float64) (*db.
 
 	quantityHeld := taxLot.Quantity - taxLot.QuantitySold
 
-	// Calculate realized gain (from sold quantity)
-	costBasisSold := taxLot.QuantitySold * taxLot.CostPerShare
-	proceedsSold := taxLot.QuantitySold * currentPrice
-	realizedGain := proceedsSold - costBasisSold
+	// Calculate realized gain from historical sell transactions rather than the current market price.
+	realizedGain := 0.0
+	if taxLot.QuantitySold > 0 {
+		transactions, err := s.taxLotRepo.GetTaxTransactionsByTaxLotID(taxLot.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		var proceedsSold float64
+		var feesPaid float64
+		for _, tx := range transactions {
+			if tx.Type != "SELL" {
+				continue
+			}
+
+			proceeds := tx.TotalAmount
+			if proceeds <= 0 {
+				proceeds = tx.Quantity * tx.Price
+			}
+			proceedsSold += proceeds
+			feesPaid += tx.Fees
+		}
+
+		costBasisSold := taxLot.QuantitySold * taxLot.CostPerShare
+		realizedGain = (proceedsSold - feesPaid) - costBasisSold
+	}
 
 	// Calculate unrealized gain (from held quantity)
 	costBasisHeld := quantityHeld * taxLot.CostPerShare
