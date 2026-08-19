@@ -173,7 +173,3 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-
-func generateRequestID() string {
-	return time.Now().Format("20060102150405") + "-" + string(rune(time.Now().Nanosecond()))
-}
