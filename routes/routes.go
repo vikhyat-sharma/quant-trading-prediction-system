@@ -26,6 +26,9 @@ func SetupRoutes(
 	r.Use(middleware.CORSMiddleware)
 	r.Use(middleware.ContentTypeMiddleware)
 
+	r.HandleFunc("/health", middleware.HealthHandler).Methods(constants.MethodGET)
+	r.HandleFunc("/ready", middleware.HealthHandler).Methods(constants.MethodGET)
+
 	protectedUserRoutes := r.PathPrefix("/users").Subrouter()
 	protectedUserRoutes.Use(middleware.AuthMiddleware)
 
