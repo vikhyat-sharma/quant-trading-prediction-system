@@ -8,8 +8,9 @@ import (
 )
 
 type mockTaxLotRepoForService struct {
-	taxLot *db.TaxLot
-	err    error
+	taxLot       *db.TaxLot
+	err          error
+	transactions []db.TaxTransaction
 }
 
 func (m *mockTaxLotRepoForService) GetTaxLotByID(id int) (*db.TaxLot, error) {
@@ -50,6 +51,13 @@ func (m *mockTaxLotRepoForService) CreateTaxLot(taxLot *db.TaxLot) error {
 
 func (m *mockTaxLotRepoForService) GetTaxTransactionsByPortfolioID(portfolioID int) ([]db.TaxTransaction, error) {
 	return nil, nil
+}
+
+func (m *mockTaxLotRepoForService) GetTaxTransactionsByTaxLotID(taxLotID int) ([]db.TaxTransaction, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.transactions, nil
 }
 
 type mockStockRepoForService struct {
@@ -124,5 +132,41 @@ func TestGetTaxLotGains_StockNotFound(t *testing.T) {
 	_, err := service.GetTaxLotGains(1, 11.0)
 	if err == nil || err.Error() != "stock not found" {
 		t.Fatalf("expected stock not found error, got %v", err)
+	}
+}
+
+func TestGetTaxLotGains_UsesHistoricalSellTransactionsForRealizedGain(t *testing.T) {
+	taxLot := &db.TaxLot{
+		ID:              1,
+		StockID:         1,
+		Quantity:        100,
+		QuantitySold:    40,
+		CostPerShare:    10.0,
+		TotalCost:       1000.0,
+		AcquisitionDate: time.Now().AddDate(-2, 0, 0),
+	}
+
+	taxLotRepo := &mockTaxLotRepoForService{
+		taxLot: taxLot,
+		transactions: []db.TaxTransaction{{
+			TaxLotID:        1,
+			Type:            "SELL",
+			Quantity:        40,
+			Price:           15.0,
+			TotalAmount:     600.0,
+			Fees:            20.0,
+			TransactionDate: time.Now().AddDate(-1, 0, 0),
+		}},
+	}
+	stockRepo := &mockStockRepoForService{stock: &db.Stock{ID: 1, Symbol: "TST", Name: "Test", Exchange: "NSE"}}
+	service := &TaxLotService{taxLotRepo: taxLotRepo, stockRepo: stockRepo}
+
+	gains, err := service.GetTaxLotGains(1, 12.5)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if gains.RealizedGain != 180.0 {
+		t.Fatalf("expected realized gain 180.0, got %f", gains.RealizedGain)
 	}
 }
