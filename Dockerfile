@@ -1,34 +1,35 @@
-FROM golang:1.21-alpine AS builder
+# ── Build stage ──────────────────────────────────────────────────────────────
+FROM golang:1.23-alpine AS builder
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy go mod and sum files
+# Download dependencies first (layer-cached separately from source)
 COPY go.mod go.sum ./
-
-# Download dependencies
 RUN go mod download
 
-# Copy the source code
 COPY . .
 
-# Build the application
-RUN go build -o main .
+# Build a statically linked binary
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /app/server .
 
-# Use a minimal base image for the final stage
-FROM alpine:latest
+# ── Runtime stage ─────────────────────────────────────────────────────────────
+FROM alpine:3.20
 
-# Install ca-certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
+# Install CA certificates for outbound HTTPS (e.g. market data providers)
+RUN apk --no-cache add ca-certificates tzdata
 
-# Set the working directory
-WORKDIR /root/
+# Run as a non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Copy the binary from the builder stage
-COPY --from=builder /app/main .
+WORKDIR /app
 
-# Expose the port the app runs on
+COPY --from=builder /app/server .
+
+USER appuser
+
 EXPOSE 8080
 
-# Command to run the application
-CMD ["./main"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:8080/health || exit 1
+
+ENTRYPOINT ["./server"]
