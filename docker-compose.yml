@@ -5,16 +5,20 @@ services:
     build: .
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
-      - PORT=8080
+      # Override DATABASE_URL to use the compose service name
       - DATABASE_URL=postgres://user:password@db:5432/quant_trading?sslmode=disable
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    restart: unless-stopped
     networks:
       - app-network
 
   db:
-    image: postgres:13-alpine
+    image: postgres:16-alpine
     environment:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
@@ -23,7 +27,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d quant_trading"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
     networks:
       - app-network
 
