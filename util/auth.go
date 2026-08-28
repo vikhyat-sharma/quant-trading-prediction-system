@@ -15,16 +15,14 @@ import (
 
 const (
 	JWTSecretEnvKey = "JWT_SECRET"
-	JWTSecretKey    = "QUANT_TRADING_SECRET_KEY"
-	TokenExpiry     = time.Hour * 24 * 7 // 7 days
+	TokenExpiry     = time.Hour * 24 // 24 hours; use refresh tokens for longer sessions
 )
 
-// GetJWTSecret returns the configured JWT secret from the environment.
+// GetJWTSecret returns the JWT secret from the environment.
+// Returns an empty string if not configured; callers must treat this as a
+// configuration error in production.
 func GetJWTSecret() string {
-	if secret := strings.TrimSpace(os.Getenv(JWTSecretEnvKey)); secret != "" {
-		return secret
-	}
-	return JWTSecretKey
+	return strings.TrimSpace(os.Getenv(JWTSecretEnvKey))
 }
 
 // Claims represents JWT claims
@@ -40,23 +38,25 @@ func HashPassword(password string) (string, error) {
 	if len(password) < 8 {
 		return "", errors.New("password must be at least 8 characters")
 	}
-
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err
 	}
-
 	return string(hash), nil
 }
 
 // VerifyPassword verifies a password against its hash
 func VerifyPassword(hashedPassword, password string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
-	return err == nil
+	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)) == nil
 }
 
-// GenerateJWT generates a JWT token
+// GenerateJWT generates a signed JWT token.
+// Returns an error if JWT_SECRET is not configured.
 func GenerateJWT(userID int, email, role string) (string, error) {
+	secret := GetJWTSecret()
+	if secret == "" {
+		return "", errors.New("JWT_SECRET environment variable is not configured")
+	}
 	claims := &Claims{
 		UserID: userID,
 		Email:  email,
@@ -66,29 +66,30 @@ func GenerateJWT(userID int, email, role string) (string, error) {
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
-
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(GetJWTSecret()))
+	return token.SignedString([]byte(secret))
 }
 
-// VerifyJWT verifies and parses a JWT token
+// VerifyJWT verifies and parses a JWT token.
+// Returns an error if JWT_SECRET is not configured or the token is invalid.
 func VerifyJWT(tokenString string) (*Claims, error) {
+	secret := GetJWTSecret()
+	if secret == "" {
+		return nil, errors.New("JWT_SECRET environment variable is not configured")
+	}
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
-		return []byte(GetJWTSecret()), nil
+		return []byte(secret), nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
-
 	if !token.Valid {
 		return nil, errors.New("invalid token")
 	}
-
 	return claims, nil
 }
 
@@ -101,8 +102,7 @@ func ValidateEmail(email string) bool {
 // GenerateAPIKey generates a random API key
 func GenerateAPIKey() (string, error) {
 	b := make([]byte, 32)
-	_, err := rand.Read(b)
-	if err != nil {
+	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
 	return base64.URLEncoding.EncodeToString(b), nil
