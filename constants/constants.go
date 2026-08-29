@@ -28,6 +28,8 @@ const (
 
 // CORS Settings
 const (
+	// CORSAllowOrigin should be overridden via CORS_ALLOW_ORIGIN env var in production.
+	// The wildcard "*" is only acceptable for fully public, credential-free APIs.
 	CORSAllowOrigin  = "*"
 	CORSAllowMethods = "GET, POST, PUT, DELETE, OPTIONS"
 	CORSAllowHeaders = "Content-Type, Authorization"
@@ -100,10 +102,12 @@ const (
 	EnvKeyDatabaseURL = "DATABASE_URL"
 	EnvKeyEnvironment = "ENVIRONMENT"
 	EnvKeyLogLevel    = "LOG_LEVEL"
+	EnvKeyJWTSecret   = "JWT_SECRET"
+	EnvKeyCORSOrigin  = "CORS_ALLOW_ORIGIN"
 
 	// Default values
 	DefaultPort        = "8080"
-	DefaultDatabaseURL = "postgres://user:password@localhost/quant_trading?sslmode=disable"
+	DefaultDatabaseURL = "" // No default — must be explicitly configured
 	DefaultEnvironment = "development"
 	DefaultLogLevel    = "info"
 )
