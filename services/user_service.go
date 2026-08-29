@@ -25,6 +25,10 @@ func (s *UserService) GetUserByID(id int) (*db.User, error) {
 	return s.repo.GetUserByID(id)
 }
 
+func (s *UserService) GetUserByEmail(email string) (*db.User, error) {
+	return s.repo.GetUserByEmail(email)
+}
+
 func (s *UserService) CreateUser(user *db.User) (*db.User, error) {
 	return s.repo.CreateUser(user)
 }
