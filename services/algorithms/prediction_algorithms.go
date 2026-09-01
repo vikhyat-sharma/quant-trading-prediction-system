@@ -14,16 +14,16 @@ type PredictionResult struct {
 }
 
 type BacktestResult struct {
-	Strategy            string    `json:"strategy"`
-	TotalReturn         float64   `json:"total_return"`
-	AnnualizedReturn    float64   `json:"annualized_return"`
-	WinRate             float64   `json:"win_rate"`
-	MaxDrawdown         float64   `json:"max_drawdown"`
-	Trades              int       `json:"trades"`
-	PositiveTrades      int       `json:"positive_trades"`
-	NegativeTrades      int       `json:"negative_trades"`
-	EquityCurve         []float64 `json:"equity_curve"`
-	DailyReturns        []float64 `json:"daily_returns"`
+	Strategy         string    `json:"strategy"`
+	TotalReturn      float64   `json:"total_return"`
+	AnnualizedReturn float64   `json:"annualized_return"`
+	WinRate          float64   `json:"win_rate"`
+	MaxDrawdown      float64   `json:"max_drawdown"`
+	Trades           int       `json:"trades"`
+	PositiveTrades   int       `json:"positive_trades"`
+	NegativeTrades   int       `json:"negative_trades"`
+	EquityCurve      []float64 `json:"equity_curve"`
+	DailyReturns     []float64 `json:"daily_returns"`
 }
 
 // TechnicalIndicators holds calculated technical indicators
@@ -70,48 +70,74 @@ func CalculateEMA(prices []float64, period int) float64 {
 	return ema
 }
 
-// CalculateRSI calculates Relative Strength Index
+// CalculateRSI calculates the Relative Strength Index using Wilder's smoothed
+// moving average method (the standard definition).
+// Requires at least period+1 price points.
 func CalculateRSI(prices []float64, period int) float64 {
 	if len(prices) < period+1 {
-		return 50 // Neutral RSI
+		return 50 // Neutral RSI when insufficient data
 	}
 
-	gains := 0.0
-	losses := 0.0
-
-	for i := len(prices) - period; i < len(prices); i++ {
+	// Seed: simple average of first `period` changes
+	var avgGain, avgLoss float64
+	for i := 1; i <= period; i++ {
 		change := prices[i] - prices[i-1]
 		if change > 0 {
-			gains += change
+			avgGain += change
 		} else {
-			losses += -change
+			avgLoss += -change
 		}
 	}
+	avgGain /= float64(period)
+	avgLoss /= float64(period)
 
-	avgGain := gains / float64(period)
-	avgLoss := losses / float64(period)
+	// Wilder's smoothing for remaining prices
+	for i := period + 1; i < len(prices); i++ {
+		change := prices[i] - prices[i-1]
+		if change > 0 {
+			avgGain = (avgGain*float64(period-1) + change) / float64(period)
+			avgLoss = (avgLoss * float64(period-1)) / float64(period)
+		} else {
+			avgGain = (avgGain * float64(period-1)) / float64(period)
+			avgLoss = (avgLoss*float64(period-1) + (-change)) / float64(period)
+		}
+	}
 
 	if avgLoss == 0 {
 		return 100
 	}
-
 	rs := avgGain / avgLoss
-	rsi := 100 - (100 / (1 + rs))
-
-	return rsi
+	return 100 - (100 / (1 + rs))
 }
 
-// CalculateMACD calculates MACD (Moving Average Convergence Divergence)
+// CalculateMACD calculates MACD (Moving Average Convergence Divergence).
+// MACD line = EMA(12) - EMA(26)
+// Signal line = 9-period EMA of the MACD line.
+// Requires at least 26 + 9 - 1 = 34 price points for a meaningful signal.
 func CalculateMACD(prices []float64) (macd, signal float64) {
+	if len(prices) < 26 {
+		return 0, 0
+	}
 	ema12 := CalculateEMA(prices, 12)
 	ema26 := CalculateEMA(prices, 26)
 	macd = ema12 - ema26
 
-	// Signal line is 9-period EMA of MACD
-	// For simplicity, approximate with 0.7 factor
-	signal = macd * 0.7
+	// Build a MACD series over the available history to compute the signal EMA.
+	// We need at least 26 points to get the first MACD value, then 9 more for signal.
+	if len(prices) < 34 {
+		// Not enough data for a proper signal line; return MACD only.
+		signal = macd
+		return
+	}
 
-	return macd, signal
+	macdSeries := make([]float64, 0, len(prices)-25)
+	for i := 26; i <= len(prices); i++ {
+		e12 := CalculateEMA(prices[:i], 12)
+		e26 := CalculateEMA(prices[:i], 26)
+		macdSeries = append(macdSeries, e12-e26)
+	}
+	signal = CalculateEMA(macdSeries, 9)
+	return
 }
 
 // CalculateBollingerBands calculates Bollinger Bands
@@ -278,7 +304,9 @@ func MeanReversionPrediction(prices []float64) *PredictionResult {
 	}
 }
 
-// EnsemblePrediction combines multiple algorithms for better prediction
+// EnsemblePrediction combines multiple algorithms for a weighted prediction.
+// Sub-strategies that return a zero predicted price (insufficient data) are
+// excluded from the weighted average to avoid pulling the result toward zero.
 func EnsemblePrediction(prices []float64) *PredictionResult {
 	if len(prices) < 30 {
 		return &PredictionResult{
@@ -287,40 +315,40 @@ func EnsemblePrediction(prices []float64) *PredictionResult {
 		}
 	}
 
-	sma := SimpleMovingAveragePrediction(prices)
-	ema := ExponentialMovingAveragePrediction(prices)
-	momentum := MomentumPrediction(prices)
-	meanReversion := MeanReversionPrediction(prices)
-
-	// Weight the predictions
-	weights := map[string]float64{
-		"SMA":            0.25,
-		"EMA":            0.3,
-		"MOMENTUM":       0.25,
-		"MEAN_REVERSION": 0.2,
+	type weightedStrategy struct {
+		result *PredictionResult
+		weight float64
 	}
 
-	predictions := []*PredictionResult{sma, ema, momentum, meanReversion}
-	totalWeight := 0.0
-	weightedPrice := 0.0
-	totalConfidence := 0.0
+	candidates := []weightedStrategy{
+		{SimpleMovingAveragePrediction(prices), 0.25},
+		{ExponentialMovingAveragePrediction(prices), 0.30},
+		{MomentumPrediction(prices), 0.25},
+		{MeanReversionPrediction(prices), 0.20},
+	}
 
-	for _, pred := range predictions {
-		weight := weights[pred.Algorithm]
-		weightedPrice += pred.PredictedPrice * weight
-		totalConfidence += pred.ConfidenceScore * weight
-		totalWeight += weight
+	weightedPrice := 0.0
+	weightedConfidence := 0.0
+	totalWeight := 0.0
+	weightedVariation := 0.0
+
+	for _, c := range candidates {
+		if c.result == nil || c.result.PredictedPrice <= 0 {
+			continue
+		}
+		weightedPrice += c.result.PredictedPrice * c.weight
+		weightedConfidence += c.result.ConfidenceScore * c.weight
+		weightedVariation += ((c.result.UpperBound - c.result.LowerBound) / 2) * c.weight
+		totalWeight += c.weight
+	}
+
+	if totalWeight == 0 {
+		return &PredictionResult{Algorithm: "ENSEMBLE", ConfidenceScore: 0.3}
 	}
 
 	predictedPrice := weightedPrice / totalWeight
-	confidence := totalConfidence / totalWeight
-
-	// Use average bounds
-	variation := 0.0
-	for _, pred := range predictions {
-		variation += (pred.UpperBound - pred.LowerBound) / 2
-	}
-	variation /= float64(len(predictions))
+	confidence := weightedConfidence / totalWeight
+	variation := weightedVariation / totalWeight
 
 	return &PredictionResult{
 		PredictedPrice:  predictedPrice,
