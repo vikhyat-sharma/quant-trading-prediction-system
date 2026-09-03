@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -11,7 +13,8 @@ import (
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/util"
 )
 
-// AuthMiddleware validates JWT tokens
+// AuthMiddleware validates JWT tokens and stores claims in request context.
+// Claims are never stored in mutable request headers.
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
@@ -26,82 +29,88 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		token := parts[1]
-		claims, err := util.VerifyJWT(token)
+		claims, err := util.VerifyJWT(parts[1])
 		if err != nil {
 			http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 			return
 		}
 
-		// Store claims in context for later use
-		r.Header.Set("X-User-ID", strconv.Itoa(claims.UserID))
-		r.Header.Set("X-User-Email", claims.Email)
-		r.Header.Set("X-User-Role", claims.Role)
+		ctx := context.WithValue(r.Context(), contextKeyUserID, claims.UserID)
+		ctx = context.WithValue(ctx, contextKeyUserEmail, claims.Email)
+		ctx = context.WithValue(ctx, contextKeyUserRole, claims.Role)
 
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-// OptionalAuthMiddleware allows both authenticated and unauthenticated requests
+// OptionalAuthMiddleware populates context if a valid token is present.
 func OptionalAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader != "" {
 			parts := strings.SplitN(authHeader, " ", 2)
 			if len(parts) == 2 && parts[0] == "Bearer" {
-				token := parts[1]
-				claims, err := util.VerifyJWT(token)
-				if err == nil {
-					r.Header.Set("X-User-ID", strconv.Itoa(claims.UserID))
-					r.Header.Set("X-User-Email", claims.Email)
-					r.Header.Set("X-User-Role", claims.Role)
+				if claims, err := util.VerifyJWT(parts[1]); err == nil {
+					ctx := context.WithValue(r.Context(), contextKeyUserID, claims.UserID)
+					ctx = context.WithValue(ctx, contextKeyUserEmail, claims.Email)
+					ctx = context.WithValue(ctx, contextKeyUserRole, claims.Role)
+					r = r.WithContext(ctx)
 				}
 			}
 		}
-
 		next.ServeHTTP(w, r)
 	})
 }
 
-// AdminMiddleware checks if user has admin role
+// AdminMiddleware requires admin role; must be applied after AuthMiddleware.
 func AdminMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userRole := r.Header.Get("X-User-Role")
-		if !util.IsAdminRole(userRole) {
+		if !util.IsAdminRole(ContextUserRole(r.Context())) {
 			http.Error(w, "Insufficient permissions", http.StatusForbidden)
 			return
 		}
-
 		next.ServeHTTP(w, r)
 	})
 }
 
-// RateLimitMiddleware implements basic rate limiting
+// RateLimiter implements a sliding-window in-memory rate limiter.
 type RateLimiter struct {
-	mu            sync.RWMutex
+	mu            sync.Mutex
 	requestCounts map[string][]time.Time
 	maxRequests   int
 	window        time.Duration
+	stop          chan struct{}
 }
 
+// NewRateLimiter creates a rate limiter. Call Stop() when the server shuts down.
 func NewRateLimiter(maxRequests int, window time.Duration) *RateLimiter {
 	rl := &RateLimiter{
 		requestCounts: make(map[string][]time.Time),
 		maxRequests:   maxRequests,
 		window:        window,
+		stop:          make(chan struct{}),
 	}
+	go rl.cleanup()
+	return rl
+}
 
-	// Cleanup old entries periodically
-	go func() {
-		ticker := time.NewTicker(time.Minute)
-		defer ticker.Stop()
-		for range ticker.C {
+// Stop terminates the background cleanup goroutine.
+func (rl *RateLimiter) Stop() {
+	close(rl.stop)
+}
+
+func (rl *RateLimiter) cleanup() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
 			now := time.Now()
 			rl.mu.Lock()
-			for ip := range rl.requestCounts {
-				var filtered []time.Time
-				for _, t := range rl.requestCounts[ip] {
-					if now.Sub(t) < window {
+			for ip, times := range rl.requestCounts {
+				filtered := times[:0]
+				for _, t := range times {
+					if now.Sub(t) < rl.window {
 						filtered = append(filtered, t)
 					}
 				}
@@ -112,64 +121,59 @@ func NewRateLimiter(maxRequests int, window time.Duration) *RateLimiter {
 				}
 			}
 			rl.mu.Unlock()
+		case <-rl.stop:
+			return
 		}
-	}()
-
-	return rl
+	}
 }
 
+// Middleware returns an http.Handler middleware for rate limiting.
 func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := r.RemoteAddr
 		now := time.Now()
 
 		rl.mu.Lock()
-		defer rl.mu.Unlock()
-
-		// Clean old requests
-		var filtered []time.Time
-		for _, t := range rl.requestCounts[ip] {
+		times := rl.requestCounts[ip]
+		filtered := times[:0]
+		for _, t := range times {
 			if now.Sub(t) < rl.window {
 				filtered = append(filtered, t)
 			}
 		}
-
 		if len(filtered) >= rl.maxRequests {
+			rl.mu.Unlock()
 			w.Header().Set("Retry-After", "60")
 			http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
 			return
 		}
-
 		rl.requestCounts[ip] = append(filtered, now)
+		rl.mu.Unlock()
+
 		next.ServeHTTP(w, r)
 	})
 }
 
-// RequestIDMiddleware adds request ID to each request
-func RequestIDMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestID := r.Header.Get("X-Request-ID")
-		if requestID == "" {
-			requestID = generateRequestID()
-		}
-		r.Header.Set("X-Request-ID", requestID)
-		w.Header().Set("X-Request-ID", requestID)
-
-		log.Printf("[%s] %s %s", requestID, r.Method, r.RequestURI)
-		next.ServeHTTP(w, r)
-	})
+// generateRequestID returns a cryptographically random 16-byte hex string.
+func generateRequestID() string {
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback: use nanosecond timestamp (not ideal but won't panic)
+		return hex.EncodeToString([]byte(time.Now().String()))[:16]
+	}
+	return hex.EncodeToString(b)
 }
 
-// RecoveryMiddleware recovers from panics
+// RecoveryMiddleware recovers from panics and returns 500.
 func RecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("Panic recovered: %v", err)
+				log.Printf("panic recovered request_id=%s: %v",
+					r.Header.Get("X-Request-ID"), err)
 				http.Error(w, "Internal server error", http.StatusInternalServerError)
 			}
 		}()
-
 		next.ServeHTTP(w, r)
 	})
 }
