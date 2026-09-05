@@ -1,6 +1,7 @@
 package services
 
 import (
+	"database/sql"
 	"testing"
 	"time"
 
@@ -12,6 +13,8 @@ type mockTaxLotRepoForService struct {
 	err          error
 	transactions []db.TaxTransaction
 }
+
+func (m *mockTaxLotRepoForService) DB() *sql.DB { return nil }
 
 func (m *mockTaxLotRepoForService) GetTaxLotByID(id int) (*db.TaxLot, error) {
 	if m.err != nil {
