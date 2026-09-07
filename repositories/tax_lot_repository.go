@@ -17,6 +17,9 @@ func NewTaxLotRepository(database *sql.DB) *TaxLotRepository {
 	return &TaxLotRepository{db: database}
 }
 
+// DB returns the underlying *sql.DB so callers can begin transactions.
+func (r *TaxLotRepository) DB() *sql.DB { return r.db }
+
 // CreateTaxLot creates a new tax lot
 func (r *TaxLotRepository) CreateTaxLot(taxLot *db.TaxLot) error {
 	query := `INSERT INTO tax_lots 
