@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -223,8 +224,8 @@ func (c *TaxLotController) GetTaxLotGains(w http.ResponseWriter, r *http.Request
 	})
 }
 
-// GetPortfolioTaxGains gets total tax gains for a portfolio
-// GET /users/{userID}/portfolios/{portfolioID}/tax-gains
+// GetPortfolioTaxGains gets total tax gains for a portfolio.
+// GET /users/{userID}/portfolios/{portfolioID}/tax-gains?prices=1:100.50,2:200.00
 func (c *TaxLotController) GetPortfolioTaxGains(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	portfolioID, err := strconv.Atoi(vars["portfolioID"])
@@ -233,31 +234,26 @@ func (c *TaxLotController) GetPortfolioTaxGains(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Parse current prices from query parameters
-	// Format: ?prices=1:100,2:150,3:200 (stockID:price pairs)
-	pricesQuery := r.URL.Query().Get("prices")
-
-	if pricesQuery != "" {
-		// Parse the prices query parameter
-		// This is a simple implementation; can be enhanced
-		// You can also accept JSON body for complex scenarios
-		http.Error(w, "prices parameter format not specified. Use JSON body instead.", http.StatusBadRequest)
-		return
+	// Parse prices from query string: ?prices=stockID:price,stockID:price
+	currentPrices := make(map[int]float64)
+	if pricesQuery := r.URL.Query().Get("prices"); pricesQuery != "" {
+		for _, pair := range strings.Split(pricesQuery, ",") {
+			parts := strings.SplitN(pair, ":", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			stockID, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
+			price, err2 := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+			if err1 != nil || err2 != nil || stockID <= 0 || price < 0 {
+				continue
+			}
+			currentPrices[stockID] = price
+		}
 	}
 
-	// For now, accept prices in JSON body
-	var req struct {
-		CurrentPrices map[int]float64 `json:"current_prices"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	gains, err := c.taxLotService.GetPortfolioTaxGains(portfolioID, req.CurrentPrices)
+	gains, err := c.taxLotService.GetPortfolioTaxGains(portfolioID, currentPrices)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
