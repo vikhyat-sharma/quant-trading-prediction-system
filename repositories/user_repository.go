@@ -84,6 +84,21 @@ func (r *UserRepository) GetUserByID(id int) (*db.User, error) {
 	return &user, nil
 }
 
+// GetUserByEmail fetches a user including the password hash (for authentication only).
+func (r *UserRepository) GetUserByEmail(email string) (*db.User, error) {
+	var user db.User
+	if err := r.db.QueryRow(
+		"SELECT id, name, email, password, role, is_active, created_at FROM users WHERE email = $1",
+		email,
+	).Scan(&user.ID, &user.Name, &user.Email, &user.Password, &user.Role, &user.IsActive, &user.CreatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, db.ErrRecordNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *UserRepository) CreateUser(user *db.User) (*db.User, error) {
 	var id int
 	if err := r.db.QueryRow(
