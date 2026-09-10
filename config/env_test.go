@@ -1,68 +1,104 @@
 package config
 
 import (
-	"os"
 	"testing"
 )
 
-func TestLoadConfig_Defaults(t *testing.T) {
-	// Clear any existing env vars
-	os.Unsetenv("PORT")
-	os.Unsetenv("DATABASE_URL")
+func TestLoadConfig_MissingDatabaseURL_ReturnsError(t *testing.T) {
+	t.Setenv("PORT", "8080")
+	t.Setenv("DATABASE_URL", "")
+	t.Setenv("ENVIRONMENT", "development")
+	t.Setenv("LOG_LEVEL", "info")
 
-	config, err := LoadConfig()
-
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-
-	if config == nil {
-		t.Errorf("expected config, got nil")
-	}
-
-	// Defaults should be set
-	if config.Port == "" {
-		t.Errorf("expected Port to have a default value")
-	}
-
-	if config.DatabaseURL == "" {
-		t.Errorf("expected DatabaseURL to have a default value")
+	_, err := LoadConfig()
+	if err == nil {
+		t.Fatal("expected error when DATABASE_URL is empty, got nil")
 	}
 }
 
-func TestLoadConfig_WithEnvVars(t *testing.T) {
-	// Set environment variables
-	os.Setenv("PORT", "9000")
-	os.Setenv("DATABASE_URL", "postgres://test:test@localhost/testdb")
+func TestLoadConfig_WithValidEnvVars(t *testing.T) {
+	t.Setenv("PORT", "9000")
+	t.Setenv("DATABASE_URL", "postgres://test:test@localhost/testdb")
+	t.Setenv("ENVIRONMENT", "development")
+	t.Setenv("LOG_LEVEL", "info")
 
-	config, err := LoadConfig()
-
+	cfg, err := LoadConfig()
 	if err != nil {
-		t.Errorf("expected no error, got %v", err)
+		t.Fatalf("expected no error, got %v", err)
 	}
-
-	if config.Port != "9000" {
-		t.Errorf("expected Port 9000, got %s", config.Port)
+	if cfg.Port != "9000" {
+		t.Errorf("expected Port 9000, got %s", cfg.Port)
 	}
-
-	if config.DatabaseURL != "postgres://test:test@localhost/testdb" {
-		t.Errorf("expected specific DatabaseURL, got %s", config.DatabaseURL)
+	if cfg.DatabaseURL != "postgres://test:test@localhost/testdb" {
+		t.Errorf("unexpected DatabaseURL: %s", cfg.DatabaseURL)
 	}
-
-	// Cleanup
-	os.Unsetenv("PORT")
-	os.Unsetenv("DATABASE_URL")
 }
 
-func TestLoadConfig_StructFields(t *testing.T) {
-	config, err := LoadConfig()
+func TestLoadConfig_InvalidPort_ReturnsError(t *testing.T) {
+	t.Setenv("PORT", "notaport")
+	t.Setenv("DATABASE_URL", "postgres://test:test@localhost/testdb")
+	t.Setenv("ENVIRONMENT", "development")
+	t.Setenv("LOG_LEVEL", "info")
 
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
+	_, err := LoadConfig()
+	if err == nil {
+		t.Fatal("expected error for invalid PORT, got nil")
 	}
+}
 
-	// Verify that Config struct has the expected fields
-	if config.Port == "" && config.DatabaseURL == "" {
-		t.Errorf("expected Config to have Port and DatabaseURL fields populated")
+func TestLoadConfig_InvalidEnvironment_ReturnsError(t *testing.T) {
+	t.Setenv("PORT", "8080")
+	t.Setenv("DATABASE_URL", "postgres://test:test@localhost/testdb")
+	t.Setenv("ENVIRONMENT", "unknown")
+	t.Setenv("LOG_LEVEL", "info")
+
+	_, err := LoadConfig()
+	if err == nil {
+		t.Fatal("expected error for invalid ENVIRONMENT, got nil")
+	}
+}
+
+func TestLoadConfig_ProductionRequiresJWTSecret(t *testing.T) {
+	t.Setenv("PORT", "8080")
+	t.Setenv("DATABASE_URL", "postgres://test:test@localhost/testdb")
+	t.Setenv("ENVIRONMENT", "production")
+	t.Setenv("LOG_LEVEL", "info")
+	t.Setenv("JWT_SECRET", "")
+
+	_, err := LoadConfig()
+	if err == nil {
+		t.Fatal("expected error when JWT_SECRET is missing in production, got nil")
+	}
+}
+
+func TestLoadConfig_ProductionWithJWTSecret_Succeeds(t *testing.T) {
+	t.Setenv("PORT", "8080")
+	t.Setenv("DATABASE_URL", "postgres://test:test@localhost/testdb")
+	t.Setenv("ENVIRONMENT", "production")
+	t.Setenv("LOG_LEVEL", "info")
+	t.Setenv("JWT_SECRET", "a-strong-secret-that-is-long-enough-32c")
+
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !cfg.IsProduction() {
+		t.Error("expected IsProduction() to return true")
+	}
+}
+
+func TestLoadConfig_DevelopmentWithoutJWTSecret_Succeeds(t *testing.T) {
+	t.Setenv("PORT", "8080")
+	t.Setenv("DATABASE_URL", "postgres://test:test@localhost/testdb")
+	t.Setenv("ENVIRONMENT", "development")
+	t.Setenv("LOG_LEVEL", "info")
+	t.Setenv("JWT_SECRET", "")
+
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("expected no error in development without JWT_SECRET, got %v", err)
+	}
+	if !cfg.IsDevelopment() {
+		t.Error("expected IsDevelopment() to return true")
 	}
 }
