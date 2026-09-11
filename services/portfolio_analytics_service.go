@@ -63,12 +63,12 @@ func (s *PortfolioAnalyticsService) CalculateValueAtRisk(portfolioID int, days i
 	copy(sorted, returns)
 	sort.Float64s(sorted)
 	// VaR is the quantile at (1-confidence)
-	idx := int((1.0-confidence)*float64(len(sorted)))
+	idx := int((1.0 - confidence) * float64(len(sorted)))
 	if idx < 0 {
 		idx = 0
 	}
 	if idx >= len(sorted) {
-		idx = len(sorted)-1
+		idx = len(sorted) - 1
 	}
 	varValue := -sorted[idx] // VaR is reported as a positive loss
 	return varValue, nil
@@ -117,7 +117,7 @@ func (s *PortfolioAnalyticsService) CalculateExpectedShortfall(portfolioID int, 
 	sorted := make([]float64, len(returns))
 	copy(sorted, returns)
 	sort.Float64s(sorted)
-	idx := int((1.0-confidence)*float64(len(sorted)))
+	idx := int((1.0 - confidence) * float64(len(sorted)))
 	if idx < 1 {
 		idx = 1
 	}
