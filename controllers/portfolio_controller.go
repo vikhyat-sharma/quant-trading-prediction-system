@@ -8,8 +8,10 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/constants"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/db"
+	"github.com/vikhyat-sharma/quant-trading-prediction-system/middleware"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/repositories"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/services"
+	"github.com/vikhyat-sharma/quant-trading-prediction-system/util"
 )
 
 type PortfolioController struct {
@@ -21,66 +23,67 @@ func NewPortfolioController(service *services.PortfolioService, priceRepo *repos
 	return &PortfolioController{service: service, priceRepo: priceRepo}
 }
 
+// ownsPortfolio returns true if the caller is the owner of the userID resource or is an admin.
+func ownsPortfolio(r *http.Request, userID int) bool {
+	callerID := middleware.ContextUserID(r.Context())
+	return callerID == userID || util.IsAdminRole(middleware.ContextUserRole(r.Context()))
+}
+
+func parsePortfolioIDs(w http.ResponseWriter, r *http.Request) (userID, portfolioID int, ok bool) {
+	vars := mux.Vars(r)
+	userID, err := strconv.Atoi(vars["userID"])
+	if err != nil || userID <= 0 {
+		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidUserIDFormat, nil)
+		return 0, 0, false
+	}
+	portfolioID, err = strconv.Atoi(vars["portfolioID"])
+	if err != nil || portfolioID <= 0 {
+		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidPortfolioIDFormat, nil)
+		return 0, 0, false
+	}
+	return userID, portfolioID, true
+}
+
 func (c *PortfolioController) GetPortfolios(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	userIDStr := vars["userID"]
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidUserIDFormat, err)
+	userID, err := strconv.Atoi(vars["userID"])
+	if err != nil || userID <= 0 {
+		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidUserIDFormat, nil)
+		return
+	}
+	if !ownsPortfolio(r, userID) {
+		writeErrorResponse(w, http.StatusForbidden, "Insufficient permissions", nil)
 		return
 	}
 
-	if userID <= 0 {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgUserIDMustBePositive, nil)
-		return
-	}
-
-	// Check for search/filter query parameters
 	search := r.URL.Query().Get("search")
-
-	// If no search parameters, use traditional method
 	if search == "" {
 		portfolios, err := c.service.GetPortfoliosByUserID(userID)
 		if err != nil {
-			if errors.Is(err, db.ErrRecordNotFound) {
-				writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgPortfolioNotFound, nil)
-				return
-			}
-			writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolios, err)
+			writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolios, nil)
 			return
 		}
 		writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: portfolios})
 		return
 	}
 
-	// Use search and filter
-	filter := &repositories.PortfolioFilter{
-		Search: search,
-		UserID: userID,
-	}
-
-	portfolios, err := c.service.SearchAndFilterPortfolios(filter)
+	portfolios, err := c.service.SearchAndFilterPortfolios(&repositories.PortfolioFilter{Search: search, UserID: userID})
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolios, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolios, nil)
 		return
 	}
-
 	writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: portfolios})
 }
 
 func (c *PortfolioController) CreatePortfolio(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	userIDStr := vars["userID"]
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidUserIDFormat, err)
+	userID, err := strconv.Atoi(vars["userID"])
+	if err != nil || userID <= 0 {
+		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidUserIDFormat, nil)
 		return
 	}
-
-	if userID <= 0 {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgUserIDMustBePositive, nil)
+	if !ownsPortfolio(r, userID) {
+		writeErrorResponse(w, http.StatusForbidden, "Insufficient permissions", nil)
 		return
 	}
 
@@ -88,46 +91,31 @@ func (c *PortfolioController) CreatePortfolio(w http.ResponseWriter, r *http.Req
 		Name        string `json:"name"`
 		Description string `json:"description"`
 	}
-
 	if err := parseJSONBody(r, &payload); err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
-
 	if payload.Name == "" {
 		writeErrorResponse(w, http.StatusBadRequest, "Portfolio name is required", nil)
 		return
 	}
 
 	portfolio := &db.Portfolio{UserID: userID, Name: payload.Name, Description: payload.Description}
-	createdPortfolio, err := c.service.CreatePortfolio(portfolio)
+	created, err := c.service.CreatePortfolio(portfolio)
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToCreatePortfolio, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToCreatePortfolio, nil)
 		return
 	}
-
-	writeJSONResponse(w, http.StatusCreated, SuccessResponse{Data: createdPortfolio})
+	writeJSONResponse(w, http.StatusCreated, SuccessResponse{Data: created})
 }
 
 func (c *PortfolioController) GetPortfolio(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userIDStr := vars["userID"]
-	portfolioIDStr := vars["portfolioID"]
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidUserIDFormat, err)
+	userID, portfolioID, ok := parsePortfolioIDs(w, r)
+	if !ok {
 		return
 	}
-
-	portfolioID, err := strconv.Atoi(portfolioIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidPortfolioIDFormat, err)
-		return
-	}
-
-	if userID <= 0 || portfolioID <= 0 {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgUserIDMustBePositive, nil)
+	if !ownsPortfolio(r, userID) {
+		writeErrorResponse(w, http.StatusForbidden, "Insufficient permissions", nil)
 		return
 	}
 
@@ -137,32 +125,19 @@ func (c *PortfolioController) GetPortfolio(w http.ResponseWriter, r *http.Reques
 			writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgPortfolioNotFound, nil)
 			return
 		}
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolio, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolio, nil)
 		return
 	}
-
 	writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: portfolio})
 }
 
 func (c *PortfolioController) UpdatePortfolio(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userIDStr := vars["userID"]
-	portfolioIDStr := vars["portfolioID"]
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidUserIDFormat, err)
+	userID, portfolioID, ok := parsePortfolioIDs(w, r)
+	if !ok {
 		return
 	}
-
-	portfolioID, err := strconv.Atoi(portfolioIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidPortfolioIDFormat, err)
-		return
-	}
-
-	if userID <= 0 || portfolioID <= 0 {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgUserIDMustBePositive, nil)
+	if !ownsPortfolio(r, userID) {
+		writeErrorResponse(w, http.StatusForbidden, "Insufficient permissions", nil)
 		return
 	}
 
@@ -170,50 +145,35 @@ func (c *PortfolioController) UpdatePortfolio(w http.ResponseWriter, r *http.Req
 		Name        string `json:"name"`
 		Description string `json:"description"`
 	}
-
 	if err := parseJSONBody(r, &payload); err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
-
 	if payload.Name == "" {
 		writeErrorResponse(w, http.StatusBadRequest, "Portfolio name is required", nil)
 		return
 	}
 
 	portfolio := &db.Portfolio{ID: portfolioID, UserID: userID, Name: payload.Name, Description: payload.Description}
-	updatedPortfolio, err := c.service.UpdatePortfolio(portfolio)
+	updated, err := c.service.UpdatePortfolio(portfolio)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgPortfolioNotFound, nil)
 			return
 		}
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToUpdatePortfolio, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToUpdatePortfolio, nil)
 		return
 	}
-
-	writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: updatedPortfolio})
+	writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: updated})
 }
 
 func (c *PortfolioController) DeletePortfolio(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userIDStr := vars["userID"]
-	portfolioIDStr := vars["portfolioID"]
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidUserIDFormat, err)
+	userID, portfolioID, ok := parsePortfolioIDs(w, r)
+	if !ok {
 		return
 	}
-
-	portfolioID, err := strconv.Atoi(portfolioIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidPortfolioIDFormat, err)
-		return
-	}
-
-	if userID <= 0 || portfolioID <= 0 {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgUserIDMustBePositive, nil)
+	if !ownsPortfolio(r, userID) {
+		writeErrorResponse(w, http.StatusForbidden, "Insufficient permissions", nil)
 		return
 	}
 
@@ -222,32 +182,19 @@ func (c *PortfolioController) DeletePortfolio(w http.ResponseWriter, r *http.Req
 			writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgPortfolioNotFound, nil)
 			return
 		}
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToDeletePortfolio, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToDeletePortfolio, nil)
 		return
 	}
-
 	writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: map[string]string{"message": "Portfolio deleted successfully"}})
 }
 
 func (c *PortfolioController) GetHoldings(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userIDStr := vars["userID"]
-	portfolioIDStr := vars["portfolioID"]
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidUserIDFormat, err)
+	userID, portfolioID, ok := parsePortfolioIDs(w, r)
+	if !ok {
 		return
 	}
-
-	portfolioID, err := strconv.Atoi(portfolioIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidPortfolioIDFormat, err)
-		return
-	}
-
-	if userID <= 0 || portfolioID <= 0 {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgUserIDMustBePositive, nil)
+	if !ownsPortfolio(r, userID) {
+		writeErrorResponse(w, http.StatusForbidden, "Insufficient permissions", nil)
 		return
 	}
 
@@ -256,7 +203,7 @@ func (c *PortfolioController) GetHoldings(w http.ResponseWriter, r *http.Request
 			writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgPortfolioNotFound, nil)
 			return
 		}
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolio, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolio, nil)
 		return
 	}
 
@@ -266,32 +213,19 @@ func (c *PortfolioController) GetHoldings(w http.ResponseWriter, r *http.Request
 			writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: []*db.PortfolioItem{}})
 			return
 		}
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrieveHoldings, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrieveHoldings, nil)
 		return
 	}
-
 	writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: holdings})
 }
 
 func (c *PortfolioController) AddHolding(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userIDStr := vars["userID"]
-	portfolioIDStr := vars["portfolioID"]
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidUserIDFormat, err)
+	userID, portfolioID, ok := parsePortfolioIDs(w, r)
+	if !ok {
 		return
 	}
-
-	portfolioID, err := strconv.Atoi(portfolioIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidPortfolioIDFormat, err)
-		return
-	}
-
-	if userID <= 0 || portfolioID <= 0 {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgUserIDMustBePositive, nil)
+	if !ownsPortfolio(r, userID) {
+		writeErrorResponse(w, http.StatusForbidden, "Insufficient permissions", nil)
 		return
 	}
 
@@ -300,7 +234,7 @@ func (c *PortfolioController) AddHolding(w http.ResponseWriter, r *http.Request)
 			writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgPortfolioNotFound, nil)
 			return
 		}
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolio, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolio, nil)
 		return
 	}
 
@@ -309,59 +243,38 @@ func (c *PortfolioController) AddHolding(w http.ResponseWriter, r *http.Request)
 		Quantity float64 `json:"quantity"`
 		AvgCost  float64 `json:"avg_cost"`
 	}
-
 	if err := parseJSONBody(r, &payload); err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
-
 	if payload.StockID <= 0 || payload.Quantity <= 0 || payload.AvgCost < 0 {
-		writeErrorResponse(w, http.StatusBadRequest, "Stock ID, quantity and avg_cost are required and must be valid", nil)
+		writeErrorResponse(w, http.StatusBadRequest, "stock_id, quantity (>0), and avg_cost (>=0) are required", nil)
 		return
 	}
 
-	item := &db.PortfolioItem{
-		PortfolioID: portfolioID,
-		StockID:     payload.StockID,
-		Quantity:    payload.Quantity,
-		AvgCost:     payload.AvgCost,
-	}
-
-	createdHolding, err := c.service.CreateHolding(item)
+	item := &db.PortfolioItem{PortfolioID: portfolioID, StockID: payload.StockID, Quantity: payload.Quantity, AvgCost: payload.AvgCost}
+	created, err := c.service.CreateHolding(item)
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToCreateHolding, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToCreateHolding, nil)
 		return
 	}
-
-	writeJSONResponse(w, http.StatusCreated, SuccessResponse{Data: createdHolding})
+	writeJSONResponse(w, http.StatusCreated, SuccessResponse{Data: created})
 }
 
 func (c *PortfolioController) UpdateHolding(w http.ResponseWriter, r *http.Request) {
+	userID, portfolioID, ok := parsePortfolioIDs(w, r)
+	if !ok {
+		return
+	}
+	if !ownsPortfolio(r, userID) {
+		writeErrorResponse(w, http.StatusForbidden, "Insufficient permissions", nil)
+		return
+	}
+
 	vars := mux.Vars(r)
-	userIDStr := vars["userID"]
-	portfolioIDStr := vars["portfolioID"]
-	holdingIDStr := vars["holdingID"]
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidUserIDFormat, err)
-		return
-	}
-
-	portfolioID, err := strconv.Atoi(portfolioIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidPortfolioIDFormat, err)
-		return
-	}
-
-	holdingID, err := strconv.Atoi(holdingIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidHoldingIDFormat, err)
-		return
-	}
-
-	if userID <= 0 || portfolioID <= 0 || holdingID <= 0 {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgUserIDMustBePositive, nil)
+	holdingID, err := strconv.Atoi(vars["holdingID"])
+	if err != nil || holdingID <= 0 {
+		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidHoldingIDFormat, nil)
 		return
 	}
 
@@ -370,7 +283,7 @@ func (c *PortfolioController) UpdateHolding(w http.ResponseWriter, r *http.Reque
 			writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgPortfolioNotFound, nil)
 			return
 		}
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolio, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolio, nil)
 		return
 	}
 
@@ -378,57 +291,42 @@ func (c *PortfolioController) UpdateHolding(w http.ResponseWriter, r *http.Reque
 		Quantity float64 `json:"quantity"`
 		AvgCost  float64 `json:"avg_cost"`
 	}
-
 	if err := parseJSONBody(r, &payload); err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
-
 	if payload.Quantity <= 0 || payload.AvgCost < 0 {
-		writeErrorResponse(w, http.StatusBadRequest, "Quantity must be greater than zero and avg_cost must be non-negative", nil)
+		writeErrorResponse(w, http.StatusBadRequest, "quantity must be > 0 and avg_cost >= 0", nil)
 		return
 	}
 
 	item := &db.PortfolioItem{ID: holdingID, PortfolioID: portfolioID, Quantity: payload.Quantity, AvgCost: payload.AvgCost}
-	updatedHolding, err := c.service.UpdateHolding(item)
+	updated, err := c.service.UpdateHolding(item)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgHoldingNotFound, nil)
 			return
 		}
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToUpdateHolding, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToUpdateHolding, nil)
 		return
 	}
-
-	writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: updatedHolding})
+	writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: updated})
 }
 
 func (c *PortfolioController) DeleteHolding(w http.ResponseWriter, r *http.Request) {
+	userID, portfolioID, ok := parsePortfolioIDs(w, r)
+	if !ok {
+		return
+	}
+	if !ownsPortfolio(r, userID) {
+		writeErrorResponse(w, http.StatusForbidden, "Insufficient permissions", nil)
+		return
+	}
+
 	vars := mux.Vars(r)
-	userIDStr := vars["userID"]
-	portfolioIDStr := vars["portfolioID"]
-	holdingIDStr := vars["holdingID"]
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidUserIDFormat, err)
-		return
-	}
-
-	portfolioID, err := strconv.Atoi(portfolioIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidPortfolioIDFormat, err)
-		return
-	}
-
-	holdingID, err := strconv.Atoi(holdingIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidHoldingIDFormat, err)
-		return
-	}
-
-	if userID <= 0 || portfolioID <= 0 || holdingID <= 0 {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgUserIDMustBePositive, nil)
+	holdingID, err := strconv.Atoi(vars["holdingID"])
+	if err != nil || holdingID <= 0 {
+		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidHoldingIDFormat, nil)
 		return
 	}
 
@@ -437,7 +335,7 @@ func (c *PortfolioController) DeleteHolding(w http.ResponseWriter, r *http.Reque
 			writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgPortfolioNotFound, nil)
 			return
 		}
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolio, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolio, nil)
 		return
 	}
 
@@ -446,43 +344,28 @@ func (c *PortfolioController) DeleteHolding(w http.ResponseWriter, r *http.Reque
 			writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgHoldingNotFound, nil)
 			return
 		}
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToDeleteHolding, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToDeleteHolding, nil)
 		return
 	}
-
 	writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: map[string]string{"message": "Holding deleted successfully"}})
 }
 
-// GetPortfolioValue returns current portfolio value and cost basis
-// GET /users/{userID}/portfolios/{portfolioID}/value
 func (c *PortfolioController) GetPortfolioValue(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userIDStr := vars["userID"]
-	portfolioIDStr := vars["portfolioID"]
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidUserIDFormat, err)
+	userID, portfolioID, ok := parsePortfolioIDs(w, r)
+	if !ok {
 		return
 	}
-	portfolioID, err := strconv.Atoi(portfolioIDStr)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgInvalidPortfolioIDFormat, err)
+	if !ownsPortfolio(r, userID) {
+		writeErrorResponse(w, http.StatusForbidden, "Insufficient permissions", nil)
 		return
 	}
 
-	if userID <= 0 || portfolioID <= 0 {
-		writeErrorResponse(w, http.StatusBadRequest, constants.ErrMsgUserIDMustBePositive, nil)
-		return
-	}
-
-	// Verify portfolio exists
 	if _, err := c.service.GetPortfolioByID(userID, portfolioID); err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			writeErrorResponse(w, http.StatusNotFound, constants.ErrMsgPortfolioNotFound, nil)
 			return
 		}
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolio, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrievePortfolio, nil)
 		return
 	}
 
@@ -492,21 +375,19 @@ func (c *PortfolioController) GetPortfolioValue(w http.ResponseWriter, r *http.R
 			writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: map[string]float64{"total_value": 0, "cost_basis": 0}})
 			return
 		}
-		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrieveHoldings, err)
+		writeErrorResponse(w, http.StatusInternalServerError, constants.ErrMsgFailedToRetrieveHoldings, nil)
 		return
 	}
 
 	totalValue := 0.0
 	totalCostBasis := 0.0
 	for _, h := range holdings {
-		latest, err := c.priceRepo.GetLatestPrice(h.StockID)
 		price := h.AvgCost
-		if err == nil && latest != nil {
+		if latest, err := c.priceRepo.GetLatestPrice(h.StockID); err == nil && latest != nil {
 			price = latest.Price
 		}
 		totalValue += h.Quantity * price
 		totalCostBasis += h.Quantity * h.AvgCost
 	}
-
 	writeJSONResponse(w, http.StatusOK, SuccessResponse{Data: map[string]float64{"total_value": totalValue, "cost_basis": totalCostBasis}})
 }
