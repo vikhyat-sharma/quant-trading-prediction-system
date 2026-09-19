@@ -1,6 +1,6 @@
 module github.com/vikhyat-sharma/quant-trading-prediction-system
 
-go 1.25.3
+go 1.25.0
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
