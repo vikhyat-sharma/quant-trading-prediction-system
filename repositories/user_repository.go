@@ -72,6 +72,28 @@ func (r *UserRepository) GetAllUsers() ([]*db.User, error) {
 	return users, nil
 }
 
+// GetAllUsersPaginated returns a page of users.
+func (r *UserRepository) GetAllUsersPaginated(limit, offset int) ([]*db.User, error) {
+	rows, err := r.db.Query(
+		"SELECT id, name, email, created_at FROM users ORDER BY id LIMIT $1 OFFSET $2",
+		limit, offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*db.User
+	for rows.Next() {
+		var user db.User
+		if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.CreatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, &user)
+	}
+	return users, rows.Err()
+}
+
 func (r *UserRepository) GetUserByID(id int) (*db.User, error) {
 	var user db.User
 	if err := r.db.QueryRow("SELECT id, name, email, created_at FROM users WHERE id = $1", id).
