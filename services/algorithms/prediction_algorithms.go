@@ -262,7 +262,10 @@ func MomentumPrediction(prices []float64) *PredictionResult {
 	}
 }
 
-// MeanReversionPrediction predicts price based on mean reversion
+// MeanReversionPrediction predicts price based on mean reversion.
+// The mean is computed over the entire input slice. When used in backtesting,
+// callers must pass only the prices available at prediction time (no future data).
+// The BacktestStrategy function enforces this by passing prices[:i] at each step.
 func MeanReversionPrediction(prices []float64) *PredictionResult {
 	if len(prices) < 30 {
 		return &PredictionResult{
