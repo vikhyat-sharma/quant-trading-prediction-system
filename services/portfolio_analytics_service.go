@@ -269,7 +269,7 @@ func (s *PortfolioAnalyticsService) CalculatePortfolioVolatility(portfolioID int
 		return 0, nil
 	}
 
-	// Calculate standard deviation of returns
+	// Calculate standard deviation of returns using sample variance (N-1)
 	mean := 0.0
 	for _, r := range returns {
 		mean += r
@@ -280,7 +280,9 @@ func (s *PortfolioAnalyticsService) CalculatePortfolioVolatility(portfolioID int
 	for _, r := range returns {
 		variance += math.Pow(r-mean, 2)
 	}
-	variance /= float64(len(returns))
+	if len(returns) > 1 {
+		variance /= float64(len(returns) - 1)
+	}
 
 	volatility := math.Sqrt(variance) * math.Sqrt(252) // Annualized volatility
 
@@ -341,12 +343,14 @@ func (s *PortfolioAnalyticsService) CalculateSharpeRatio(portfolioID int, days i
 	meanReturn /= float64(len(returns))
 	annualizedReturn := meanReturn * 252
 
-	// Calculate standard deviation
+	// Calculate standard deviation using sample variance (N-1 denominator)
 	variance := 0.0
 	for _, r := range returns {
 		variance += math.Pow(r-meanReturn, 2)
 	}
-	variance /= float64(len(returns))
+	if len(returns) > 1 {
+		variance /= float64(len(returns) - 1)
+	}
 	stdDev := math.Sqrt(variance) * math.Sqrt(252)
 
 	// Calculate Sharpe ratio
