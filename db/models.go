@@ -19,15 +19,16 @@ type Stock struct {
 
 // Prediction represents a price prediction for a stock
 type Prediction struct {
-	ID              int       `json:"id" db:"id"`
-	StockID         int       `json:"stock_id" db:"stock_id"`
-	PredictedPrice  float64   `json:"predicted_price" db:"predicted_price"`
-	Algorithm       string    `json:"algorithm" db:"algorithm"`
-	ConfidenceScore float64   `json:"confidence_score" db:"confidence_score"`
-	UpperBound      float64   `json:"upper_bound" db:"upper_bound"`
-	LowerBound      float64   `json:"lower_bound" db:"lower_bound"`
-	Date            time.Time `json:"date" db:"date"`
-	CreatedAt       time.Time `json:"created_at" db:"created_at"`
+	ID               int       `json:"id" db:"id"`
+	StockID          int       `json:"stock_id" db:"stock_id"`
+	PredictedPrice   float64   `json:"predicted_price" db:"predicted_price"`
+	Algorithm        string    `json:"algorithm" db:"algorithm"`
+	AlgorithmVersion string    `json:"algorithm_version" db:"algorithm_version"`
+	ConfidenceScore  float64   `json:"confidence_score" db:"confidence_score"`
+	UpperBound       float64   `json:"upper_bound" db:"upper_bound"`
+	LowerBound       float64   `json:"lower_bound" db:"lower_bound"`
+	Date             time.Time `json:"date" db:"date"`
+	CreatedAt        time.Time `json:"created_at" db:"created_at"`
 }
 
 type User struct {
