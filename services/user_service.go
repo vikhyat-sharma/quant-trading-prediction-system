@@ -17,6 +17,10 @@ func (s *UserService) GetAllUsers() ([]*db.User, error) {
 	return s.repo.GetAllUsers()
 }
 
+func (s *UserService) GetAllUsersPaginated(limit, offset int) ([]*db.User, error) {
+	return s.repo.GetAllUsersPaginated(limit, offset)
+}
+
 func (s *UserService) SearchAndFilterUsers(filter *repositories.UserFilter) ([]*db.User, error) {
 	return s.repo.SearchAndFilterUsers(filter)
 }
