@@ -83,6 +83,7 @@ func EnsureSchema(database *sql.DB) error {
 		    stock_id INTEGER NOT NULL REFERENCES stocks(id) ON DELETE CASCADE,
 		    predicted_price DECIMAL(10,2) NOT NULL,
 		    algorithm VARCHAR(50) NOT NULL DEFAULT 'ENSEMBLE',
+		    algorithm_version VARCHAR(20) NOT NULL DEFAULT '1.0.0',
 		    confidence_score DECIMAL(3,2) NOT NULL DEFAULT 0.5,
 		    upper_bound DECIMAL(10,2),
 		    lower_bound DECIMAL(10,2),
@@ -251,6 +252,7 @@ func EnsureSchema(database *sql.DB) error {
 	alterations := []string{
 		`ALTER TABLE stocks ADD COLUMN IF NOT EXISTS exchange VARCHAR(10) NOT NULL DEFAULT 'NSE';`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_stocks_symbol_exchange ON stocks(symbol, exchange);`,
+		`ALTER TABLE predictions ADD COLUMN IF NOT EXISTS algorithm_version VARCHAR(20) NOT NULL DEFAULT '1.0.0';`,
 	}
 
 	for _, stmt := range alterations {
