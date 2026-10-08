@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -9,6 +10,11 @@ import (
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/repositories"
 	"github.com/vikhyat-sharma/quant-trading-prediction-system/services/algorithms"
 )
+
+// AlgorithmVersion is the current version of the prediction algorithm suite.
+// Increment this when algorithm logic changes so historical predictions remain
+// traceable to the exact implementation that produced them.
+const AlgorithmVersion = "1.1.0"
 
 type PredictionService struct {
 	repo             *repositories.PredictionRepository
@@ -52,36 +58,36 @@ func (s *PredictionService) SearchAndFilterPredictions(filter *repositories.Pred
 	return s.repo.SearchAndFilterPredictions(filter)
 }
 
-// GeneratePrediction generates a prediction for a stock using the default algorithm
+// GeneratePrediction generates a prediction for a stock using the default algorithm.
 func (s *PredictionService) GeneratePrediction(stockID int) (*db.Prediction, error) {
 	return s.GeneratePredictionWithAlgorithm(stockID, s.defaultAlgorithm)
 }
 
-// GeneratePredictionWithAlgorithm generates a prediction using a specific algorithm
+// GeneratePredictionWithAlgorithm generates a prediction using a specific algorithm.
+// The prediction date is set to the next calendar day in UTC.
+// The algorithm version is stored with the prediction for auditability.
 func (s *PredictionService) GeneratePredictionWithAlgorithm(stockID int, algorithmType string) (*db.Prediction, error) {
 	if s.priceHistoryRepo == nil {
 		return nil, fmt.Errorf("price history repository not initialized")
 	}
 
-	// Get historical price data
 	prices, err := s.priceHistoryRepo.GetHistoricalPrices(stockID, s.lookbackPeriod)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get price history: %w", err)
 	}
-
 	if len(prices) < 5 {
 		return nil, fmt.Errorf("insufficient price data for prediction (need at least 5, got %d)", len(prices))
 	}
 
-	// Extract prices in chronological order
+	// Extract prices in chronological order (oldest → newest).
+	// GetHistoricalPrices already returns them in this order.
 	priceValues := make([]float64, len(prices))
 	for i, p := range prices {
 		priceValues[i] = p.Price
 	}
 
-	// Generate prediction based on algorithm type
 	var result *algorithms.PredictionResult
-	switch algorithmType {
+	switch strings.ToUpper(algorithmType) {
 	case "SMA":
 		result = algorithms.SimpleMovingAveragePrediction(priceValues)
 	case "EMA":
@@ -96,14 +102,30 @@ func (s *PredictionService) GeneratePredictionWithAlgorithm(stockID int, algorit
 		result = algorithms.EnsemblePrediction(priceValues)
 	}
 
+	// Guard against NaN/Inf leaking into the database or API responses.
+	if result == nil || math.IsNaN(result.PredictedPrice) || math.IsInf(result.PredictedPrice, 0) {
+		return nil, fmt.Errorf("algorithm produced invalid predicted price")
+	}
+	if result.PredictedPrice <= 0 {
+		return nil, fmt.Errorf("algorithm produced non-positive predicted price: %f", result.PredictedPrice)
+	}
+	if math.IsNaN(result.ConfidenceScore) || math.IsInf(result.ConfidenceScore, 0) {
+		result.ConfidenceScore = 0
+	}
+
+	// Prediction date is the next calendar day in UTC.
+	// This is a next-day price estimate, not a guaranteed outcome.
+	predictionDate := time.Now().UTC().AddDate(0, 0, 1).Truncate(24 * time.Hour)
+
 	prediction := &db.Prediction{
-		StockID:         stockID,
-		PredictedPrice:  result.PredictedPrice,
-		Algorithm:       result.Algorithm,
-		ConfidenceScore: result.ConfidenceScore,
-		UpperBound:      result.UpperBound,
-		LowerBound:      result.LowerBound,
-		Date:            time.Now().AddDate(0, 0, 1), // Predict for next day
+		StockID:          stockID,
+		PredictedPrice:   result.PredictedPrice,
+		Algorithm:        result.Algorithm,
+		AlgorithmVersion: AlgorithmVersion,
+		ConfidenceScore:  result.ConfidenceScore,
+		UpperBound:       result.UpperBound,
+		LowerBound:       result.LowerBound,
+		Date:             predictionDate,
 	}
 
 	if s.repo == nil {
@@ -113,7 +135,7 @@ func (s *PredictionService) GeneratePredictionWithAlgorithm(stockID int, algorit
 	return s.repo.CreatePrediction(prediction)
 }
 
-// GetPredictionMetrics retrieves metrics for a specific prediction
+// GetPredictionMetrics retrieves metrics for a specific prediction.
 func (s *PredictionService) GetPredictionMetrics(predictionID int) (*db.PredictionMetric, error) {
 	if s.metricsRepo == nil {
 		return nil, fmt.Errorf("metrics repository not initialized")
@@ -121,7 +143,9 @@ func (s *PredictionService) GetPredictionMetrics(predictionID int) (*db.Predicti
 	return s.metricsRepo.GetMetricByPredictionID(predictionID)
 }
 
-// GetAlgorithmPerformance retrieves performance stats for an algorithm
+// BacktestHistoricalStrategy runs a backtest of a strategy on historical price data.
+// The backtest uses only prices available at each step (no look-ahead bias):
+// at step i, only prices[0..i-1] are visible to the algorithm.
 func (s *PredictionService) BacktestHistoricalStrategy(stockID int, days int, algorithmType string) (*algorithms.BacktestResult, error) {
 	if s.priceHistoryRepo == nil {
 		return nil, fmt.Errorf("price history repository not initialized")
