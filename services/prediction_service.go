@@ -54,6 +54,10 @@ func (s *PredictionService) GetPredictionsByStockID(stockID int) ([]*db.Predicti
 	return s.repo.GetPredictionsByStockID(stockID)
 }
 
+func (s *PredictionService) GetPredictionsByStockIDPaginated(stockID, limit, offset int) ([]*db.Prediction, error) {
+	return s.repo.GetPredictionsByStockIDPaginated(stockID, limit, offset)
+}
+
 func (s *PredictionService) SearchAndFilterPredictions(filter *repositories.PredictionFilter) ([]*db.Prediction, error) {
 	return s.repo.SearchAndFilterPredictions(filter)
 }
