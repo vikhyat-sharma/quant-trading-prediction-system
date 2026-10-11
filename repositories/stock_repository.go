@@ -72,7 +72,7 @@ func (r *StockRepository) GetStock(id int) (*db.Stock, error) {
 }
 
 func (r *StockRepository) GetAllStocks() ([]*db.Stock, error) {
-	rows, err := r.db.Query("SELECT id, symbol, exchange, name FROM stocks")
+	rows, err := r.db.Query("SELECT id, symbol, exchange, name FROM stocks ORDER BY symbol")
 	if err != nil {
 		return nil, err
 	}
@@ -87,6 +87,27 @@ func (r *StockRepository) GetAllStocks() ([]*db.Stock, error) {
 		stocks = append(stocks, &stock)
 	}
 	return stocks, nil
+}
+
+// GetAllStocksPaginated returns a page of stocks.
+func (r *StockRepository) GetAllStocksPaginated(limit, offset int) ([]*db.Stock, error) {
+	rows, err := r.db.Query(
+		"SELECT id, symbol, exchange, name FROM stocks ORDER BY symbol LIMIT $1 OFFSET $2",
+		limit, offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var stocks []*db.Stock
+	for rows.Next() {
+		var stock db.Stock
+		if err := rows.Scan(&stock.ID, &stock.Symbol, &stock.Exchange, &stock.Name); err != nil {
+			return nil, err
+		}
+		stocks = append(stocks, &stock)
+	}
+	return stocks, rows.Err()
 }
 
 func (r *StockRepository) CreateStock(stock *db.Stock) (*db.Stock, error) {
