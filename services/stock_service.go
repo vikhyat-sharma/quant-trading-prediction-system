@@ -21,6 +21,10 @@ func (s *StockService) GetAllStocks() ([]*db.Stock, error) {
 	return s.repo.GetAllStocks()
 }
 
+func (s *StockService) GetAllStocksPaginated(limit, offset int) ([]*db.Stock, error) {
+	return s.repo.GetAllStocksPaginated(limit, offset)
+}
+
 // SearchAndFilterStocks searches and filters stocks based on criteria
 func (s *StockService) SearchAndFilterStocks(filter *repositories.StockFilter) ([]*db.Stock, error) {
 	return s.repo.SearchAndFilterStocks(filter)
