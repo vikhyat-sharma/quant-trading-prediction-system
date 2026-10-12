@@ -185,7 +185,7 @@ func (c *PriceHistoryController) RecordPrice(w http.ResponseWriter, r *http.Requ
 			return
 		}
 	} else {
-		priceDate = time.Now()
+		priceDate = time.Now().UTC()
 	}
 
 	priceHistory, err := c.service.RecordPrice(stockID, payload.Price, priceDate)
