@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
 )
 
@@ -39,15 +38,12 @@ func writeErrorResponse(w http.ResponseWriter, statusCode int, message string, _
 }
 
 // parseJSONBody decodes the request body into v.
-// Returns an error if the body is missing, malformed, or too large.
+// Returns an error if the body is malformed or too large.
+// Does NOT use DisallowUnknownFields — preserves backward compatibility
+// with clients that send additional fields.
 func parseJSONBody(r *http.Request, v interface{}) error {
 	defer r.Body.Close()
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(v); err != nil && err != io.EOF {
-		return err
-	}
-	return nil
+	return json.NewDecoder(r.Body).Decode(v)
 }
 
 func httpStatusToCode(status int) string {
